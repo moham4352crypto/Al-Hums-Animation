@@ -123,7 +123,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        // Setup Renderer and Scene Fog
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x4a7c59);
@@ -138,8 +137,7 @@
         renderer.toneMappingExposure = 1.1;
         container.appendChild(renderer.domElement);
 
-        // Dynamic Lighting
-        const sun = new THREE.DirectionalLight(0xfffaed, 1.6);
+        const sun = new THREE.DirectionalLight(0xfffaed, 1.4);
         sun.position.set(80, 120, 60);
         sun.castShadow = true;
         sun.shadow.mapSize.width = 2048;
@@ -152,10 +150,10 @@
         sun.shadow.camera.bottom = -80;
         scene.add(sun);
 
-        const ambientLight = new THREE.AmbientLight(0x88aacc, 0.7);
+        const ambientLight = new THREE.AmbientLight(0x90b0d0, 0.85);
         scene.add(ambientLight);
 
-        const fillLight = new THREE.DirectionalLight(0xffaa55, 0.4);
+        const fillLight = new THREE.DirectionalLight(0xddeeff, 0.25);
         fillLight.position.set(-60, 40, -40);
         scene.add(fillLight);
 
@@ -167,11 +165,11 @@
         worldGround.receiveShadow = true;
         scene.add(worldGround);
 
-        // Highly Detailed Roblox R6 Rig Builder
+        // Roblox R6 Rig Builder - Both Arms Restored
         function createRobloxR6(shirtColor = 0x00a2ff, legColor = 0x111111, headColor = 0xf5cd2f, accessoryType = null) {
             const avatar = new THREE.Group();
             const torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
-            const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 0.3 });
+            const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 0.95, metalness: 0.0 });
             const legMat = new THREE.MeshStandardMaterial({ color: legColor, roughness: 0.6 });
             const armMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
             const steelMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.9, roughness: 0.2 });
@@ -187,7 +185,6 @@
             head.castShadow = true;
             avatar.add(head);
 
-            // Facial Details
             const eyeMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
             const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.25, 0.05), eyeMat);
             eyeL.position.set(-0.3, 4.7, 0.61);
@@ -199,7 +196,6 @@
             smile.position.set(0, 4.4, 0.61);
             avatar.add(smile);
 
-            // Accessories
             if (accessoryType === 'helmet') {
                 const helmet = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.7, 1.36), steelMat);
                 helmet.position.y = 5.15;
@@ -219,6 +215,7 @@
                 avatar.add(hood);
             }
 
+            // Left Arm
             const leftArmGroup = new THREE.Group();
             leftArmGroup.position.set(-1.5, 4, 0);
             const leftArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), armMat);
@@ -227,13 +224,16 @@
             leftArmGroup.add(leftArm);
             avatar.add(leftArmGroup);
 
+            // Right Arm
             const rightArmGroup = new THREE.Group();
             rightArmGroup.position.set(1.5, 4, 0);
             const rightArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), armMat);
             rightArm.position.y = -1;
             rightArm.castShadow = true;
             rightArmGroup.add(rightArm);
+            avatar.add(rightArmGroup);
 
+            // Sword Attachment
             const swordGroup = new THREE.Group();
             swordGroup.position.set(0, -1.8, 0.2);
             swordGroup.rotation.x = Math.PI / 2.2;
@@ -248,6 +248,7 @@
             swordGroup.visible = false;
             rightArmGroup.add(swordGroup);
 
+            // Left Leg
             const leftLegGroup = new THREE.Group();
             leftLegGroup.position.set(-0.55, 2, 0);
             const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2, 1), legMat);
@@ -256,6 +257,7 @@
             leftLegGroup.add(leftLeg);
             avatar.add(leftLegGroup);
 
+            // Right Leg
             const rightLegGroup = new THREE.Group();
             rightLegGroup.position.set(0.55, 2, 0);
             const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2, 1), legMat);
@@ -343,7 +345,6 @@
             return torchGroup;
         }
 
-        // Realistic Castle Architecture Builder (Fixes blocky floating roofs!)
         function createArchitecturalCastle() {
             const castle = new THREE.Group();
             const stoneMat = new THREE.MeshStandardMaterial({ color: 0x545d68, roughness: 0.85 });
@@ -351,14 +352,12 @@
             const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b263e, roughness: 0.5 });
             const windowGlowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
 
-            // Main Fortress Wall
             const frontWall = new THREE.Mesh(new THREE.BoxGeometry(36, 14, 3.5), stoneMat);
             frontWall.position.set(0, 7, 0);
             frontWall.castShadow = true;
             frontWall.receiveShadow = true;
             castle.add(frontWall);
 
-            // Wall Battlements
             for (let x = -17; x <= 17; x += 3.2) {
                 const cren = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.2, 4), stoneMat);
                 cren.position.set(x, 15.1, 0);
@@ -366,7 +365,6 @@
                 castle.add(cren);
             }
 
-            // Corner Towers with Roof Cones
             [-18, 18].forEach(tx => {
                 const tower = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.6, 22, 14), stoneMat);
                 tower.position.set(tx, 11, 0);
@@ -378,14 +376,12 @@
                 towerRoof.castShadow = true;
                 castle.add(towerRoof);
 
-                // Illuminated Window Slits
                 for (let wy = 7; wy <= 17; wy += 5) {
                     const win = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.2, 0.2), windowGlowMat);
                     win.position.set(tx, wy, 4.5);
                     castle.add(win);
                 }
 
-                // Flags atop towers
                 const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
                 pole.position.set(tx, 30, 0);
                 const flag = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.4, 0.1), new THREE.MeshStandardMaterial({ color: 0x00c6ff }));
@@ -393,7 +389,6 @@
                 castle.add(pole, flag);
             });
 
-            // Archway Portcullis Gate
             const gateFrame = new THREE.Mesh(new THREE.BoxGeometry(7, 9.5, 4), darkMat);
             gateFrame.position.set(0, 4.75, 0);
             castle.add(gateFrame);
@@ -405,7 +400,6 @@
             return castle;
         }
 
-        // Story Data Arrays & Scene Generators
         const storyData = [
             {
                 title: "1. A Childhood Amidst Cacao Fields",
@@ -423,7 +417,6 @@
                     scene.add(mohamed);
                     props.push(mohamed);
 
-                    // Farm Workers in background
                     for (let w = 0; w < 4; w++) {
                         const worker = createRobloxR6(0x52b788, 0x264653);
                         worker.position.set(-12 + w * 9, 0, -8 + (w % 2) * 6);
@@ -432,7 +425,6 @@
                         props.push(worker);
                     }
 
-                    // Cacao Trees with Hanging Pods
                     const treeMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.9 });
                     const leafMat = new THREE.MeshStandardMaterial({ color: 0x1b4332, roughness: 0.6 });
                     const podMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
@@ -441,15 +433,14 @@
                         const tree = new THREE.Group();
                         const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 14), treeMat);
                         trunk.position.y = 7;
-                        trunk.castShadow = true;
+                        trunk.castShadow = false;
                         tree.add(trunk);
 
                         const leaves = new THREE.Mesh(new THREE.SphereGeometry(6.5, 10, 10), leafMat);
                         leaves.position.y = 12.5;
-                        leaves.castShadow = true;
+                        leaves.castShadow = false;
                         tree.add(leaves);
 
-                        // Pods hanging on trees
                         for (let p = 0; p < 4; p++) {
                             const pod = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), podMat);
                             pod.scale.set(0.6, 1.4, 0.6);
@@ -464,7 +455,6 @@
                         props.push(tree);
                     }
 
-                    // Wooden Crates & Wheelbarrow with Harvested Pods
                     const crateMat = new THREE.MeshStandardMaterial({ color: 0x6e473b });
                     for (let c = 0; c < 6; c++) {
                         const crate = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.8, 2.6), crateMat);
@@ -482,7 +472,6 @@
                         }
                     }
 
-                    // Peripheral Wooden Fences
                     for (let f = -26; f <= 26; f += 4) {
                         const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.2, 0.4), crateMat);
                         post.position.set(f, 1.6, 15);
@@ -530,7 +519,7 @@
             {
                 title: "2. Ascension to Leadership",
                 desc: "Mohamed serves steaming stew to a long queue of grateful citizens inside a stone castle courtyard adorned with heraldic banners, glowing torches, banquet tables, and armed guards.",
-                camPos: [0, 15, 30],
+                camPos: [0, 22, 42],
                 camLookAt: [0, 4, 0],
                 setup: () => {
                     scene.fog.color.setHex(0x5c6b73);
@@ -538,13 +527,11 @@
                     worldGround.material.color.setHex(0xd4a373);
                     const props = [];
 
-                    // Castle Background
                     const castleBack = createArchitecturalCastle();
                     castleBack.position.set(0, 0, -14);
                     scene.add(castleBack);
                     props.push(castleBack);
 
-                    // Wall Banners
                     const bannerMat = new THREE.MeshStandardMaterial({ color: 0x00c6ff });
                     for (let b = -14; b <= 14; b += 7) {
                         const banner = new THREE.Mesh(new THREE.BoxGeometry(2.2, 8, 0.1), bannerMat);
@@ -553,13 +540,11 @@
                         props.push(banner);
                     }
 
-                    // Torches with Dynamic Flickering Lights
                     const t1 = createTorch(-12, 0, -12);
                     const t2 = createTorch(12, 0, -12);
                     scene.add(t1, t2);
                     props.push(t1, t2);
 
-                    // Banquet Tables with Food Plates
                     const tableMat = new THREE.MeshStandardMaterial({ color: 0x5c3d1e });
                     const table = new THREE.Mesh(new THREE.BoxGeometry(12, 1.8, 3.2), tableMat);
                     table.position.set(-6, 0.9, -3);
@@ -574,7 +559,6 @@
                     scene.add(foodCauldron);
                     props.push(foodCauldron);
 
-                    // Guards on Duty
                     const g1 = createRobloxR6(0x2a9d8f, 0x1d3557, 0xf5cd2f, 'helmet');
                     g1.position.set(-8, 0, 2);
                     g1.rig.swordGroup.visible = true;
@@ -584,7 +568,6 @@
                     scene.add(g1, g2);
                     props.push(g1, g2);
 
-                    // Steam Particles
                     const steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
                     const steamList = [];
                     for (let s = 0; s < 18; s++) {
@@ -605,7 +588,6 @@
                     heldBowl.position.set(0, -1.8, 0.6);
                     mohamed.rig.rightArmGroup.add(heldBowl);
 
-                    // Queueing Citizens
                     const villagers = [];
                     for (let i = 0; i < 9; i++) {
                         const villager = createRobloxR6(0xe9c46a, 0x264653);
@@ -669,7 +651,7 @@
             {
                 title: "3. Full-Scale War for Hums",
                 desc: "An intense battlefield filled with clashing Red vs Blue infantry, siege catapults, wooden spike barricades, impaled fallen soldiers, clashing sword sparks, and floating war embers.",
-                camPos: [0, 16, 32],
+                camPos: [0, 16, 28],
                 camLookAt: [0, 3, 0],
                 setup: () => {
                     scene.fog.color.setHex(0x3a2e2b);
@@ -677,7 +659,6 @@
                     worldGround.material.color.setHex(0x5c4d3c);
                     const props = [];
 
-                    // Siege Catapult Props
                     const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2314 });
                     [-16, 16].forEach(cx => {
                         const catapult = new THREE.Group();
@@ -692,7 +673,6 @@
                         props.push(catapult);
                     });
 
-                    // Barricades & Fallen Weapons
                     const barricadeMat = new THREE.MeshStandardMaterial({ color: 0x2b1a0e, roughness: 0.9 });
                     for (let b = -7; b <= 7; b += 2) {
                         const spike = new THREE.Mesh(new THREE.ConeGeometry(0.5, 5, 6), barricadeMat);
@@ -702,7 +682,6 @@
                         props.push(spike);
                     }
 
-                    // Impaled Fallen Bodies
                     const fallenList = [
                         { shirt: 0xd90429, leg: 0x111111, pos: [-10, 0, 6], arrows: 2 },
                         { shirt: 0x2a9d8f, leg: 0x1d3557, pos: [-6, 0, -6], arrows: 1 },
@@ -719,18 +698,17 @@
                         props.push(deadBody);
                     });
 
-                    // Active Armies Clashing
                     const warriors = [];
-                    for (let row = -4; row <= 4; row++) {
+                    for (let row = -5; row <= 5; row++) {
                         const blue = createRobloxR6(0x2a9d8f, 0x1d3557, 0xf5cd2f, 'helmet');
                         blue.rig.swordGroup.visible = true;
-                        blue.position.set(-2.2, 0, row * 2.5);
+                        blue.position.set(-1.8, 0, row * 2.2);
                         blue.rotation.y = Math.PI / 2;
                         scene.add(blue);
 
                         const red = createRobloxR6(0xd90429, 0x2b2d42, 0xf5cd2f, 'helmet');
                         red.rig.swordGroup.visible = true;
-                        red.position.set(2.2, 0, row * 2.5);
+                        red.position.set(1.8, 0, row * 2.2);
                         red.rotation.y = -Math.PI / 2;
                         scene.add(red);
 
@@ -738,18 +716,16 @@
                         props.push(blue, red);
                     }
 
-                    // Sword Clash Sparks
-                    const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                    const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffff55 });
                     const clashSparks = [];
-                    for (let c = -4; c <= 4; c++) {
-                        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), sparkMat);
-                        spark.position.set(0, 3.2, c * 2.5);
+                    for (let c = -5; c <= 5; c++) {
+                        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), sparkMat);
+                        spark.position.set(0, 3.2, c * 2.2);
                         scene.add(spark);
                         clashSparks.push(spark);
                         props.push(spark);
                     }
 
-                    // Smoke & Fire Embers
                     const smokeParticles = [];
                     const smokeMat = new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0.55 });
                     for (let s = 0; s < 45; s++) {
@@ -766,14 +742,24 @@
                             const time = Date.now() * 0.012;
 
                             warriors.forEach((w, idx) => {
-                                const swing = Math.sin(time + idx * 1.4) * 0.75;
+                                const swing = Math.sin(time * 1.5 + idx * 0.8) * 1.2;
+                                const step = Math.cos(time * 1.5 + idx * 0.8) * 0.3;
+
                                 w.blue.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 + swing;
-                                w.blue.rig.rightArmGroup.rotation.y = -Math.PI / 8;
+                                w.blue.rig.rightArmGroup.rotation.y = -Math.PI / 6;
+                                w.blue.rig.leftArmGroup.rotation.x = -swing * 0.5;
+                                w.blue.rig.leftLegGroup.rotation.x = step;
+                                w.blue.rig.rightLegGroup.rotation.x = -step;
+                                w.blue.position.x = -1.8 + step * 0.5;
 
                                 w.red.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 - swing;
-                                w.red.rig.rightArmGroup.rotation.y = Math.PI / 8;
+                                w.red.rig.rightArmGroup.rotation.y = Math.PI / 6;
+                                w.red.rig.leftArmGroup.rotation.x = swing * 0.5;
+                                w.red.rig.leftLegGroup.rotation.x = -step;
+                                w.red.rig.rightLegGroup.rotation.x = step;
+                                w.red.position.x = 1.8 - step * 0.5;
 
-                                clashSparks[idx].visible = Math.abs(swing) < 0.28;
+                                clashSparks[idx].visible = Math.abs(swing) < 0.35;
                             });
 
                             smokeParticles.forEach(p => {
@@ -787,15 +773,14 @@
             {
                 title: "4. Cast Adrift to Save Mohamed",
                 desc: "REALISTIC CASTLE MOUNT: Red invaders attack castle defenders atop a cliff, as loyal companions roll Mohamed inside a wooden barrel off the rocky precipice into crashing ocean waves below.",
-                camPos: [12, 18, 34],
-                camLookAt: [-8, 6, 0],
+                camPos: [22, 28, 52],
+                camLookAt: [-8, 4, 0],
                 setup: () => {
                     scene.fog.color.setHex(0x1a3a4b);
                     scene.background.setHex(0x1a3a4b);
                     worldGround.material.color.setHex(0x005f73);
                     const props = [];
 
-                    // Layered Cliff Terrain
                     const cliff = new THREE.Mesh(
                         new THREE.BoxGeometry(28, 14, 24),
                         new THREE.MeshStandardMaterial({ color: 0x4a4e69, roughness: 0.9 })
@@ -805,13 +790,11 @@
                     scene.add(cliff);
                     props.push(cliff);
 
-                    // Architectural Castle Built directly on top of cliff (NO FLOATING ROOF!)
                     const castle = createArchitecturalCastle();
                     castle.position.set(-18, 13, -12);
                     scene.add(castle);
                     props.push(castle);
 
-                    // Ocean Surface Below
                     const ocean = new THREE.Mesh(
                         new THREE.PlaneGeometry(400, 400),
                         new THREE.MeshStandardMaterial({ color: 0x0077b6, roughness: 0.1, metalness: 0.85 })
@@ -821,7 +804,6 @@
                     scene.add(ocean);
                     props.push(ocean);
 
-                    // Red Invaders & Blue Defenders
                     const redAttackers = [];
                     for (let i = 0; i < 4; i++) {
                         const red = createRobloxR6(0xd90429, 0x111111, 0xf5cd2f, 'helmet');
@@ -844,7 +826,6 @@
                         props.push(blue);
                     }
 
-                    // Companions pushing the barrel
                     const ally1 = createRobloxR6(0x2a9d8f, 0x1d3557);
                     ally1.position.set(-13, 13, -2);
                     ally1.rotation.y = Math.PI / 2;
@@ -856,7 +837,6 @@
                     scene.add(ally1, ally2);
                     props.push(ally1, ally2);
 
-                    // Mohamed inside the Barrel
                     const barrelGroup = new THREE.Group();
                     const barrel = new THREE.Mesh(
                         new THREE.CylinderGeometry(1.9, 1.9, 3.8, 16),
@@ -939,7 +919,6 @@
                     worldGround.material.color.setHex(0xe0a96d);
                     const props = [];
 
-                    // Palm Groves with Coconuts
                     for (let p = -18; p <= 18; p += 6) {
                         const palm = new THREE.Group();
                         const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.85, 12), new THREE.MeshStandardMaterial({ color: 0x7f5539 }));
@@ -956,7 +935,6 @@
                         props.push(palm);
                     }
 
-                    // Coastal Rock Formations
                     const rockMat = new THREE.MeshStandardMaterial({ color: 0x6c757d });
                     for (let r = 0; r < 12; r++) {
                         const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.6 + Math.random() * 1.2), rockMat);
@@ -965,7 +943,6 @@
                         props.push(rock);
                     }
 
-                    // Splintered Barrel Wreckage Planks
                     const woodMat = new THREE.MeshStandardMaterial({ color: 0x6f4e37 });
                     for (let w = 0; w < 6; w++) {
                         const plank = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 2.2), woodMat);
@@ -1008,7 +985,6 @@
                     worldGround.material.color.setHex(0xdda15e);
                     const props = [];
 
-                    // Grand Snack Shop Pavilion
                     const shop = new THREE.Mesh(new THREE.BoxGeometry(18, 7.5, 7.5), new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
                     shop.position.set(0, 3.75, -6);
 
@@ -1024,7 +1000,6 @@
                     scene.add(shop, roof, counter, sign);
                     props.push(shop, roof, counter, sign);
 
-                    // Chocolate Displays & Cash Bags
                     const jarMat = new THREE.MeshStandardMaterial({ color: 0xffeeaa, transparent: true, opacity: 0.85 });
                     const chocMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.3 });
                     const moneyMat = new THREE.MeshStandardMaterial({ color: 0x2b9348, roughness: 0.5 });
@@ -1036,7 +1011,6 @@
                         props.push(jar);
                     }
 
-                    // Mohamed & Alizar (Sellers)
                     const mohamed = createRobloxR6(0x2a9d8f, 0x264653);
                     mohamed.position.set(-3.5, 0, -1.5);
                     scene.add(mohamed);
@@ -1055,7 +1029,6 @@
                     choc2.position.set(0, -1.8, 0.5);
                     alizar.rig.rightArmGroup.add(choc2);
 
-                    // HUGE PACKED CROWD OF CUSTOMERS (16+ NPCs)
                     const customerList = [];
                     const colors = [0xee9b00, 0xca6702, 0x0a9396, 0x9b5de5, 0xf15bb5, 0x00bbf9, 0x00f5d4, 0xe76f51];
 
@@ -1076,7 +1049,6 @@
                         props.push(cust);
                     }
 
-                    // Plaza Benches with Seated Diners
                     const benchMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b });
                     [-9, 9].forEach(bx => {
                         const bench = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.3, 1.6), benchMat);
@@ -1111,7 +1083,7 @@
             },
             {
                 title: "7. Corruption and Destruction",
-                desc: "ENHANCED SCENE 7: Corrupt enforcers burn down the snack shop with blazing torches. Charred timber beams crumble amidst raging fire light, flying embers, and thick smoke.",
+                desc: "Corrupt enforcers burn down the snack shop with blazing torches. Charred timber beams crumble amidst raging fire light, flying embers, and thick smoke.",
                 camPos: [0, 14, 30],
                 camLookAt: [0, 3, 0],
                 setup: () => {
@@ -1120,14 +1092,12 @@
                     worldGround.material.color.setHex(0x181310);
                     const props = [];
 
-                    // Charred Collapsed Shop Frame
                     const charredMat = new THREE.MeshStandardMaterial({ color: 0x121212, roughness: 0.95 });
                     const shopBase = new THREE.Mesh(new THREE.BoxGeometry(15, 5.8, 6.8), charredMat);
                     shopBase.position.set(0, 2.9, -4.5);
                     scene.add(shopBase);
                     props.push(shopBase);
 
-                    // Broken Wooden Beams
                     const woodMat = new THREE.MeshStandardMaterial({ color: 0x2b1a0e, roughness: 0.9 });
                     for (let b = 0; b < 10; b++) {
                         const beam = new THREE.Mesh(new THREE.BoxGeometry(0.75, 8, 0.75), woodMat);
@@ -1138,14 +1108,12 @@
                         props.push(beam);
                     }
 
-                    // Destroyed Counter Debris
                     const counter = new THREE.Mesh(new THREE.BoxGeometry(11, 1.3, 1.3), charredMat);
                     counter.position.set(0, 0.65, 0.2);
                     counter.rotation.z = -0.22;
                     scene.add(counter);
                     props.push(counter);
 
-                    // Corrupt Enforcers with Torches
                     const enforcers = [];
                     const positions = [[-8, 0, 1.5], [8, 0, 1.5], [-3, 0, 5.5], [4, 0, 5.5]];
                     positions.forEach(pos => {
@@ -1164,7 +1132,6 @@
                         props.push(enf);
                     });
 
-                    // Dynamic Inferno Lighting
                     const fireLight1 = new THREE.PointLight(0xff4500, 7.5, 40);
                     fireLight1.position.set(-2.5, 4.5, -3.5);
                     const fireLight2 = new THREE.PointLight(0xffaa00, 6.0, 40);
@@ -1172,7 +1139,6 @@
                     scene.add(fireLight1, fireLight2);
                     props.push(fireLight1, fireLight2);
 
-                    // High-Density Inferno Particles (120+ particles)
                     const fireParticles = [];
                     const colors = [0xff0000, 0xff4500, 0xffaa00, 0xffff00, 0x222222];
                     
@@ -1224,7 +1190,6 @@
                     worldGround.material.color.setHex(0x52b788);
                     const props = [];
 
-                    // Marble Temple Columns
                     const pillarMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.1 });
                     for (let p = -14; p <= 14; p += 4.5) {
                         const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 15, 16), pillarMat);
@@ -1234,7 +1199,6 @@
                         props.push(pillar);
                     }
 
-                    // Elevated Sacred Dais
                     const podium = new THREE.Mesh(
                         new THREE.CylinderGeometry(6, 7.2, 2.6, 24),
                         pillarMat
@@ -1244,7 +1208,6 @@
                     scene.add(podium);
                     props.push(podium);
 
-                    // Golden Braziers with Flame Lights
                     [-7, 7].forEach(bx => {
                         const brazier = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.6, 3, 12), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9 }));
                         brazier.position.set(bx, 1.5, -2);
@@ -1257,13 +1220,11 @@
                         props.push(bLight);
                     });
 
-                    // Golden Divine Aura Light
                     const auraLight = new THREE.PointLight(0xffd700, 6, 35);
                     auraLight.position.set(0, 5.5, -2);
                     scene.add(auraLight);
                     props.push(auraLight);
 
-                    // Floating Aura Sparkles
                     const sparkles = [];
                     const sparkleMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
                     for (let sp = 0; sp < 55; sp++) {
@@ -1279,7 +1240,6 @@
                     scene.add(mohamed);
                     props.push(mohamed);
 
-                    // Crowds of Bowing Devotees
                     const followers = [];
                     for (let i = -5; i <= 5; i++) {
                         if (i === 0) continue;
