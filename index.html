@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Journey of Mohamed - 3D Animated Story</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            user-select: none;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #story-ui {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 900px;
+            background: rgba(12, 16, 24, 0.88);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(0, 198, 255, 0.4);
+            border-radius: 12px;
+            padding: 20px 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        #scene-title {
+            margin: 0;
+            font-size: 22px;
+            color: #ffcc00;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+        }
+
+        #scene-description {
+            margin: 0;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #ddd;
+            min-height: 48px;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 12px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #00c6ff;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: #00c6ff;
+            color: #000;
+            box-shadow: 0 0 10px #00c6ff;
+        }
+
+        #scene-counter {
+            font-family: monospace;
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="story-ui">
+        <h2 id="scene-title">Scene Title</h2>
+        <p id="scene-description">Loading narrative...</p>
+        <div class="controls-row">
+            <span id="scene-counter">SCENE 1 / 8</span>
+            <div class="btn-group">
+                <button onclick="prevScene()">◄ Prev</button>
+                <button id="autoplay-btn" onclick="toggleAutoPlay()">Autoplay: ON</button>
+                <button onclick="nextScene()">Next ►</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- THREE.JS ENGINE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x7ec0ee);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(50, 100, 50);
+        sun.castShadow = true;
+        scene.add(sun, new THREE.AmbientLight(0x808080));
+
+        // Baseplate World Ground
+        const worldGround = new THREE.Mesh(
+            new THREE.BoxGeometry(300, 2, 300),
+            new THREE.MeshStandardMaterial({ color: 0x448833, roughness: 0.8 })
+        );
+        worldGround.position.y = -1;
+        worldGround.receiveShadow = true;
+        scene.add(worldGround);
+
+        const grid = new THREE.GridHelper(300, 60, 0x225522, 0x336633);
+        grid.position.y = 0.01;
+        scene.add(grid);
+
+        // --- R6 ROBLOX AVATAR CREATOR ---
+        function createRobloxR6(shirtColor = 0x00a2ff, legColor = 0x111111, headColor = 0xf5cd2f) {
+            const avatar = new THREE.Group();
+            const torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor });
+            const headMat = new THREE.MeshStandardMaterial({ color: headColor });
+            const legMat = new THREE.MeshStandardMaterial({ color: legColor });
+            const armMat = new THREE.MeshStandardMaterial({ color: shirtColor });
+            const steelMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.8, roughness: 0.2 });
+
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 1), torsoMat);
+            torso.position.y = 3;
+            avatar.add(torso);
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMat);
+            head.position.y = 4.6;
+            avatar.add(head);
+
+            const leftArmGroup = new THREE.Group();
+            leftArmGroup.position.set(-1.5, 4, 0);
+            const leftArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), armMat);
+            leftArm.position.y = -1;
+            leftArmGroup.add(leftArm);
+            avatar.add(leftArmGroup);
+
+            const rightArmGroup = new THREE.Group();
+            rightArmGroup.position.set(1.5, 4, 0);
+            const rightArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), armMat);
+            rightArm.position.y = -1;
+            rightArmGroup.add(rightArm);
+
+            const swordGroup = new THREE.Group();
+            swordGroup.position.set(0, -1.8, -0.2);
+            swordGroup.rotation.x = Math.PI / 3;
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.15, 2.5, 0.3), steelMat);
+            blade.position.y = -1.2;
+            swordGroup.add(blade);
+            swordGroup.visible = false;
+            rightArmGroup.add(swordGroup);
+            avatar.add(rightArmGroup);
+
+            const leftLegGroup = new THREE.Group();
+            leftLegGroup.position.set(-0.55, 2, 0);
+            const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2, 1), legMat);
+            leftLeg.position.y = -1;
+            leftLegGroup.add(leftLeg);
+            avatar.add(leftLegGroup);
+
+            const rightLegGroup = new THREE.Group();
+            rightLegGroup.position.set(0.55, 2, 0);
+            const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2, 1), legMat);
+            rightLeg.position.y = -1;
+            rightLegGroup.add(rightLeg);
+            avatar.add(rightLegGroup);
+
+            avatar.rig = { leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup, swordGroup };
+            avatar.walkCycleTime = 0;
+            return avatar;
+        }
+
+        // --- BOT MOVEMENT ANIMATION UTILITY ---
+        function animateBotWalking(actor, targetX, targetZ, speed = 0.12) {
+            const dx = targetX - actor.position.x;
+            const dz = targetZ - actor.position.z;
+            const dist = Math.hypot(dx, dz);
+
+            if (dist > 0.5) {
+                actor.rotation.y = Math.atan2(dx, dz);
+                actor.position.x += (dx / dist) * speed;
+                actor.position.z += (dz / dist) * speed;
+
+                actor.walkCycleTime += 0.18;
+                const swing = Math.sin(actor.walkCycleTime) * 0.7;
+                actor.rig.leftArmGroup.rotation.x = swing;
+                actor.rig.rightArmGroup.rotation.x = -swing;
+                actor.rig.leftLegGroup.rotation.x = -swing;
+                actor.rig.rightLegGroup.rotation.x = swing;
+                return true;
+            } else {
+                actor.rig.leftArmGroup.rotation.x = 0;
+                actor.rig.rightArmGroup.rotation.x = 0;
+                actor.rig.leftLegGroup.rotation.x = 0;
+                actor.rig.rightLegGroup.rotation.x = 0;
+                return false;
+            }
+        }
+
+        // --- STORY SCENES DATA & ENVIRONMENT CONFIG ---
+        const storyData = [
+            {
+                title: "1. A Childhood Amidst Cacao Fields",
+                desc: "Centuries ago, Mohamed's life began in a lush green land. At eight years old, he harvested cacao beans that filled the air with rich chocolate aromas.",
+                camPos: [0, 8, 22],
+                camLookAt: [0, 2, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x2d6a4f);
+                    const mohamed = createRobloxR6(0x2a9d8f, 0x264653, 0xe9c46a);
+                    mohamed.position.set(-10, 0, 0);
+                    scene.add(mohamed);
+
+                    // Cacao trees
+                    const trees = [];
+                    for(let i=0; i<8; i++){
+                        const tree = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.5, 0.8, 6),
+                            new THREE.MeshStandardMaterial({color: 0x5c4033})
+                        );
+                        tree.position.set((Math.random()-0.5)*25, 3, (Math.random()-0.5)*25);
+                        const leaves = new THREE.Mesh(
+                            new THREE.SphereGeometry(3, 8, 8),
+                            new THREE.MeshStandardMaterial({color: 0x1b4332})
+                        );
+                        leaves.position.y = 4;
+                        tree.add(leaves);
+                        scene.add(tree);
+                        trees.push(tree);
+                    }
+                    return { actors: [mohamed], update: () => animateBotWalking(mohamed, 8, 0, 0.08) };
+                }
+            },
+            {
+                title: "2. Ascension to Leadership",
+                desc: "Mohamed became leader of the Hums tribe, introducing hummus as a staple food that nourished his people and united their community before their castle.",
+                camPos: [0, 12, 28],
+                camLookAt: [0, 4, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0xd4a373);
+                    const castle = new THREE.Mesh(
+                        new THREE.BoxGeometry(16, 12, 8),
+                        new THREE.MeshStandardMaterial({color: 0x8d99ae})
+                    );
+                    castle.position.set(0, 6, -10);
+                    scene.add(castle);
+
+                    const mohamed = createRobloxR6(0x2a9d8f, 0x1d3557);
+                    mohamed.position.set(0, 0, 2);
+                    scene.add(mohamed);
+
+                    // Hums followers
+                    const hums = [];
+                    for(let i = -2; i <= 2; i++){
+                        if (i === 0) continue;
+                        const hum = createRobloxR6(0xe9c46a, 0x264653);
+                        hum.position.set(i * 4, 0, 6);
+                        hum.rotation.y = Math.PI;
+                        scene.add(hum);
+                        hums.push(hum);
+                    }
+                    return { actors: [mohamed, ...hums], update: () => {} };
+                }
+            },
+            {
+                title: "3. Warriors of Ancient Civilizations",
+                desc: "Mohamed fought courageously in the historic battles of Egypt and Mesopotamia, wielding ancient weapons with bravery and tactical brilliance.",
+                camPos: [0, 10, 25],
+                camLookAt: [0, 3, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0xddb892);
+                    const mohamed = createRobloxR6(0xd90429, 0x2b2d42);
+                    mohamed.rig.swordGroup.visible = true;
+                    mohamed.position.set(-8, 0, 0);
+                    scene.add(mohamed);
+
+                    const enemy = createRobloxR6(0x8d99ae, 0x111111);
+                    enemy.rig.swordGroup.visible = true;
+                    enemy.position.set(8, 0, 0);
+                    scene.add(enemy);
+
+                    return { 
+                        actors: [mohamed, enemy], 
+                        update: () => {
+                            animateBotWalking(mohamed, -2, 0, 0.1);
+                            animateBotWalking(enemy, 2, 0, 0.1);
+                        } 
+                    };
+                }
+            },
+            {
+                title: "4. Conflict with the Oooga Oooga Tribe",
+                desc: "During an attack by the Oooga Oooga tribe, Mohamed was ambushed, placed inside a barrel, and cast adrift into the stormy open seas.",
+                camPos: [0, 8, 20],
+                camLookAt: [0, 2, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x0077b6); // Sea
+                    const barrel = new THREE.Mesh(
+                        new THREE.CylinderGeometry(2, 2, 4, 12),
+                        new THREE.MeshStandardMaterial({color: 0x6f4e37})
+                    );
+                    barrel.rotation.z = Math.PI / 2;
+                    barrel.position.set(-10, 1, 0);
+                    scene.add(barrel);
+
+                    return {
+                        actors: [barrel],
+                        update: () => {
+                            barrel.position.x += 0.05;
+                            barrel.position.y = 1 + Math.sin(Date.now() * 0.003) * 0.4;
+                            if (barrel.position.x > 10) barrel.position.x = -10;
+                        }
+                    };
+                }
+            },
+            {
+                title: "5. Arrival in Ginga (Texas)",
+                desc: "Washing ashore in untamed Ginga (future Texas), Mohamed met Alizar, building a strong friendship ready to take on new frontiers.",
+                camPos: [0, 7, 18],
+                camLookAt: [0, 2, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0xbc6c25);
+                    const mohamed = createRobloxR6(0x2a9d8f, 0x264653);
+                    mohamed.position.set(-6, 0, 0);
+                    scene.add(mohamed);
+
+                    const alizar = createRobloxR6(0xf4a261, 0x6b705c);
+                    alizar.position.set(6, 0, 0);
+                    scene.add(alizar);
+
+                    return {
+                        actors: [mohamed, alizar],
+                        update: () => {
+                            animateBotWalking(mohamed, -1.5, 0, 0.06);
+                            animateBotWalking(alizar, 1.5, 0, 0.06);
+                        }
+                    };
+                }
+            },
+            {
+                title: "6. Embracing the Texan Way: A&M Snacks",
+                desc: "Together, Mohamed and Alizar launched A&M Snacks, crafting delicious chocolate treats that blended native cacao with rich Texan flavors.",
+                camPos: [0, 8, 16],
+                camLookAt: [0, 2, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0xdda15e);
+                    const stand = new THREE.Mesh(
+                        new THREE.BoxGeometry(8, 3, 3),
+                        new THREE.MeshStandardMaterial({color: 0x6b705c})
+                    );
+                    stand.position.set(0, 1.5, -2);
+                    scene.add(stand);
+
+                    const mohamed = createRobloxR6(0x2a9d8f, 0x264653);
+                    mohamed.position.set(-2, 0, 1);
+                    scene.add(mohamed);
+
+                    const alizar = createRobloxR6(0xf4a261, 0x6b705c);
+                    alizar.position.set(2, 0, 1);
+                    scene.add(alizar);
+
+                    return { actors: [mohamed, alizar, stand], update: () => {} };
+                }
+            },
+            {
+                title: "7. The Threat of Corruption",
+                desc: "When corrupt forces tried to shut down their enterprise, Mohamed stood firm with integrity, choosing simplicity and leadership over greed.",
+                camPos: [0, 8, 20],
+                camLookAt: [0, 2, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x333333);
+                    const mohamed = createRobloxR6(0x2a9d8f, 0x264653);
+                    mohamed.position.set(-3, 0, 0);
+                    scene.add(mohamed);
+
+                    const corruptOfficial = createRobloxR6(0x111111, 0x000000);
+                    corruptOfficial.position.set(4, 0, 0);
+                    scene.add(corruptOfficial);
+
+                    return {
+                        actors: [mohamed, corruptOfficial],
+                        update: () => {
+                            animateBotWalking(corruptOfficial, 1.5, 0, 0.05);
+                        }
+                    };
+                }
+            },
+            {
+                title: "8. Mohamed's Legacy",
+                desc: "Mohamed became a revered mirja—a wise spiritual leader guiding generations with resilience, community strength, and enduring peace.",
+                camPos: [0, 10, 24],
+                camLookAt: [0, 3, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x52b788);
+                    const mohamed = createRobloxR6(0xffffff, 0x2a9d8f, 0xf5cd2f);
+                    mohamed.position.set(0, 0, -2);
+                    scene.add(mohamed);
+
+                    const followers = [];
+                    for(let i = -3; i <= 3; i++){
+                        if (i === 0) continue;
+                        const follower = createRobloxR6(0x74c69d, 0x1b4332);
+                        follower.position.set(i * 3, 0, 3);
+                        follower.rotation.y = Math.PI;
+                        scene.add(follower);
+                        followers.push(follower);
+                    }
+                    return { actors: [mohamed, ...followers], update: () => {} };
+                }
+            }
+        ];
+
+        // --- STORY PLAYBACK ENGINE ---
+        let currentSceneIndex = 0;
+        let activeSceneInstance = null;
+        let autoPlay = true;
+        let autoPlayTimer = null;
+
+        function clearCurrentScene() {
+            if (activeSceneInstance && activeSceneInstance.actors) {
+                activeSceneInstance.actors.forEach(actor => scene.remove(actor));
+            }
+            // Remove scene objects except base ground/grid/sun
+            for (let i = scene.children.length - 1; i >= 0; i--) {
+                const child = scene.children[i];
+                if (child !== worldGround && child !== grid && child !== sun && child.type !== 'AmbientLight') {
+                    scene.remove(child);
+                }
+            }
+        }
+
+        function loadScene(index) {
+            clearCurrentScene();
+            currentSceneIndex = index;
+
+            const data = storyData[index];
+            document.getElementById('scene-title').innerText = data.title;
+            document.getElementById('scene-description').innerText = data.desc;
+            document.getElementById('scene-counter').innerText = `SCENE ${index + 1} / ${storyData.length}`;
+
+            camera.position.set(...data.camPos);
+            camera.lookAt(...data.camLookAt);
+
+            activeSceneInstance = data.setup();
+
+            if (autoPlay) {
+                resetAutoPlayTimer();
+            }
+        }
+
+        function nextScene() {
+            const nextIdx = (currentSceneIndex + 1) % storyData.length;
+            loadScene(nextIdx);
+        }
+
+        function prevScene() {
+            const prevIdx = (currentSceneIndex - 1 + storyData.length) % storyData.length;
+            loadScene(prevIdx);
+        }
+
+        function toggleAutoPlay() {
+            autoPlay = !autoPlay;
+            document.getElementById('autoplay-btn').innerText = `Autoplay: ${autoPlay ? 'ON' : 'OFF'}`;
+            if (autoPlay) resetAutoPlayTimer();
+            else if (autoPlayTimer) clearTimeout(autoPlayTimer);
+        }
+
+        function resetAutoPlayTimer() {
+            if (autoPlayTimer) clearTimeout(autoPlayTimer);
+            autoPlayTimer = setTimeout(() => {
+                if (autoPlay) nextScene();
+            }, 8500);
+        }
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (activeSceneInstance && activeSceneInstance.update) {
+                activeSceneInstance.update();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Initialize First Scene
+        loadScene(0);
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
