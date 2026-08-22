@@ -134,11 +134,11 @@
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.1;
+        renderer.toneMappingExposure = 1.0;
         container.appendChild(renderer.domElement);
 
-        const sun = new THREE.DirectionalLight(0xfffaed, 1.4);
-        sun.position.set(80, 120, 60);
+        const sun = new THREE.DirectionalLight(0xfffaed, 1.25);
+        sun.position.set(70, 110, 50);
         sun.castShadow = true;
         sun.shadow.mapSize.width = 2048;
         sun.shadow.mapSize.height = 2048;
@@ -165,15 +165,16 @@
         worldGround.receiveShadow = true;
         scene.add(worldGround);
 
-        // Roblox R6 Rig Builder - Both Arms Restored
+        // Roblox R6 Rig Builder - Restored with Anti-Glare Matte Head Finish
         function createRobloxR6(shirtColor = 0x00a2ff, legColor = 0x111111, headColor = 0xf5cd2f, accessoryType = null) {
             const avatar = new THREE.Group();
-            const torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
-            const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 0.95, metalness: 0.0 });
-            const legMat = new THREE.MeshStandardMaterial({ color: legColor, roughness: 0.6 });
-            const armMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
-            const steelMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.9, roughness: 0.2 });
-            const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.15 });
+            const torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.6 });
+            // Matte finish on head material prevents glare reflections on faces
+            const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 1.0, metalness: 0.0, flatShading: true });
+            const legMat = new THREE.MeshStandardMaterial({ color: legColor, roughness: 0.7 });
+            const armMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.6 });
+            const steelMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.3 });
+            const goldMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.85, roughness: 0.2 });
 
             const torso = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 1), torsoMat);
             torso.position.y = 3;
@@ -266,7 +267,7 @@
             rightLegGroup.add(rightLeg);
             avatar.add(rightLegGroup);
 
-            avatar.rig = { leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup, swordGroup };
+            avatar.rig = { torso, leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup, swordGroup };
             avatar.walkCycleTime = Math.random() * 10;
             return avatar;
         }
@@ -343,6 +344,33 @@
 
             torchGroup.light = light;
             return torchGroup;
+        }
+
+        function createWheelbarrow(x, y, z) {
+            const barrow = new THREE.Group();
+            barrow.position.set(x, y, z);
+
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x5c3d1e, roughness: 0.8 });
+            const ironMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.4 });
+
+            const basin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.0, 1.6), woodMat);
+            basin.position.set(0, 1.1, 0);
+            basin.castShadow = true;
+            barrow.add(basin);
+
+            const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.2, 16), ironMat);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(-1.3, 0.7, 0);
+            wheel.castShadow = true;
+            barrow.add(wheel);
+
+            const h1 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.15, 0.15), woodMat);
+            h1.position.set(0.4, 0.8, -0.6);
+            const h2 = h1.clone();
+            h2.position.z = 0.6;
+            barrow.add(h1, h2);
+
+            return barrow;
         }
 
         function createArchitecturalCastle() {
@@ -433,12 +461,10 @@
                         const tree = new THREE.Group();
                         const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 14), treeMat);
                         trunk.position.y = 7;
-                        trunk.castShadow = false;
                         tree.add(trunk);
 
                         const leaves = new THREE.Mesh(new THREE.SphereGeometry(6.5, 10, 10), leafMat);
                         leaves.position.y = 12.5;
-                        leaves.castShadow = false;
                         tree.add(leaves);
 
                         for (let p = 0; p < 4; p++) {
@@ -454,6 +480,11 @@
                         scene.add(tree);
                         props.push(tree);
                     }
+
+                    // Added farm wheelbarrow and extra baskets
+                    const barrow = createWheelbarrow(-10, 0, 8);
+                    scene.add(barrow);
+                    props.push(barrow);
 
                     const crateMat = new THREE.MeshStandardMaterial({ color: 0x6e473b });
                     for (let c = 0; c < 6; c++) {
@@ -650,7 +681,7 @@
             },
             {
                 title: "3. Full-Scale War for Hums",
-                desc: "An intense battlefield filled with clashing Red vs Blue infantry, siege catapults, wooden spike barricades, impaled fallen soldiers, clashing sword sparks, and floating war embers.",
+                desc: "An intense battlefield with animated catapult rock launches, flying arrow salvos, dynamic sword combat, wooden spike barricades, impaled fallen soldiers, sword sparks, and lingering smoke.",
                 camPos: [0, 16, 28],
                 camLookAt: [0, 3, 0],
                 setup: () => {
@@ -659,19 +690,50 @@
                     worldGround.material.color.setHex(0x5c4d3c);
                     const props = [];
 
+                    // Catapults with animated launching arms and rocks
                     const woodMat = new THREE.MeshStandardMaterial({ color: 0x3d2314 });
-                    [-16, 16].forEach(cx => {
+                    const rockMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+
+                    const catapults = [];
+                    const flyingRocks = [];
+
+                    [-16, 16].forEach((cx, i) => {
                         const catapult = new THREE.Group();
                         const frame = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 4), woodMat);
                         frame.position.y = 1;
-                        const arm = new THREE.Mesh(new THREE.BoxGeometry(1, 7, 1), woodMat);
-                        arm.position.set(0, 4, -1);
-                        arm.rotation.x = -Math.PI / 4;
-                        catapult.add(frame, arm);
+                        
+                        const armGroup = new THREE.Group();
+                        armGroup.position.set(0, 1, -1);
+                        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.8, 7, 0.8), woodMat);
+                        arm.position.set(0, 3, 0);
+                        armGroup.add(arm);
+                        catapult.add(frame, armGroup);
+
                         catapult.position.set(cx, 0, -12);
                         scene.add(catapult);
                         props.push(catapult);
+
+                        catapults.push({ group: catapult, armGroup, side: i });
+
+                        // Launchable boulders
+                        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2), rockMat);
+                        rock.position.set(cx, 3, -12);
+                        scene.add(rock);
+                        props.push(rock);
+                        flyingRocks.push({ mesh: rock, startX: cx, active: false, time: i * 2 });
                     });
+
+                    // Flying Arrows
+                    const arrowMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+                    const flyingArrows = [];
+                    for (let a = 0; a < 8; a++) {
+                        const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.0), arrowMat);
+                        arrow.rotation.z = Math.PI / 2;
+                        arrow.position.set(-20 + Math.random() * 40, 6 + Math.random() * 4, -10 + Math.random() * 20);
+                        scene.add(arrow);
+                        props.push(arrow);
+                        flyingArrows.push({ mesh: arrow, speed: 0.4 + Math.random() * 0.3 });
+                    }
 
                     const barricadeMat = new THREE.MeshStandardMaterial({ color: 0x2b1a0e, roughness: 0.9 });
                     for (let b = -7; b <= 7; b += 2) {
@@ -741,25 +803,51 @@
                         update: () => {
                             const time = Date.now() * 0.012;
 
+                            // Dynamic War Combat Animation
                             warriors.forEach((w, idx) => {
-                                const swing = Math.sin(time * 1.5 + idx * 0.8) * 1.2;
-                                const step = Math.cos(time * 1.5 + idx * 0.8) * 0.3;
+                                const offset = idx * 0.8;
+                                const swing = Math.sin(time * 1.8 + offset) * 1.3;
+                                const step = Math.cos(time * 1.8 + offset) * 0.35;
+                                const torsoTwist = Math.sin(time * 1.8 + offset) * 0.2;
 
+                                w.blue.rig.torso.rotation.y = torsoTwist;
                                 w.blue.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 + swing;
                                 w.blue.rig.rightArmGroup.rotation.y = -Math.PI / 6;
-                                w.blue.rig.leftArmGroup.rotation.x = -swing * 0.5;
+                                w.blue.rig.leftArmGroup.rotation.x = -swing * 0.6;
                                 w.blue.rig.leftLegGroup.rotation.x = step;
                                 w.blue.rig.rightLegGroup.rotation.x = -step;
                                 w.blue.position.x = -1.8 + step * 0.5;
 
+                                w.red.rig.torso.rotation.y = -torsoTwist;
                                 w.red.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 - swing;
                                 w.red.rig.rightArmGroup.rotation.y = Math.PI / 6;
-                                w.red.rig.leftArmGroup.rotation.x = swing * 0.5;
+                                w.red.rig.leftArmGroup.rotation.x = swing * 0.6;
                                 w.red.rig.leftLegGroup.rotation.x = -step;
                                 w.red.rig.rightLegGroup.rotation.x = step;
                                 w.red.position.x = 1.8 - step * 0.5;
 
-                                clashSparks[idx].visible = Math.abs(swing) < 0.35;
+                                clashSparks[idx].visible = Math.abs(swing) < 0.3;
+                            });
+
+                            // Catapult launches & projectile trajectory
+                            catapults.forEach((c, i) => {
+                                const rockData = flyingRocks[i];
+                                rockData.time += 0.03;
+                                const launchPhase = rockData.time % 4;
+
+                                if (launchPhase < 1.0) {
+                                    c.armGroup.rotation.x = -launchPhase * 1.2;
+                                    rockData.mesh.position.set(rockData.startX, 3 + launchPhase * 8, -12 + launchPhase * 12);
+                                } else {
+                                    c.armGroup.rotation.x = -1.2 + (launchPhase - 1.0) * 0.4;
+                                    rockData.mesh.position.set(rockData.startX, 11 - (launchPhase - 1.0) * 5, -12 + launchPhase * 12);
+                                }
+                            });
+
+                            // Arrow animations
+                            flyingArrows.forEach(arr => {
+                                arr.mesh.position.x += arr.speed;
+                                if (arr.mesh.position.x > 25) arr.mesh.position.x = -25;
                             });
 
                             smokeParticles.forEach(p => {
@@ -773,8 +861,9 @@
             {
                 title: "4. Cast Adrift to Save Mohamed",
                 desc: "REALISTIC CASTLE MOUNT: Red invaders attack castle defenders atop a cliff, as loyal companions roll Mohamed inside a wooden barrel off the rocky precipice into crashing ocean waves below.",
-                camPos: [22, 28, 52],
-                camLookAt: [-8, 4, 0],
+                // Zoomed in closer camera position for better detail on the castle & barrel roll action
+                camPos: [8, 16, 28],
+                camLookAt: [-10, 7, 0],
                 setup: () => {
                     scene.fog.color.setHex(0x1a3a4b);
                     scene.background.setHex(0x1a3a4b);
@@ -796,7 +885,7 @@
                     props.push(castle);
 
                     const ocean = new THREE.Mesh(
-                        new THREE.PlaneGeometry(400, 400),
+                        new THREE.PlaneGeometry(400, 400, 32, 32),
                         new THREE.MeshStandardMaterial({ color: 0x0077b6, roughness: 0.1, metalness: 0.85 })
                     );
                     ocean.rotation.x = -Math.PI / 2;
@@ -846,7 +935,7 @@
 
                     const head = new THREE.Mesh(
                         new THREE.BoxGeometry(1.1, 1.1, 1.1),
-                        new THREE.MeshStandardMaterial({ color: 0xf5cd2f })
+                        new THREE.MeshStandardMaterial({ color: 0xf5cd2f, roughness: 1.0 })
                     );
                     head.position.y = 2.2;
                     barrelGroup.add(head);
@@ -870,6 +959,9 @@
                         actors: props,
                         update: () => {
                             timeAcc += 0.025;
+
+                            // Ocean wave motion animation
+                            ocean.position.y = 0.1 + Math.sin(timeAcc * 2) * 0.3;
 
                             redAttackers.forEach((r, idx) => {
                                 r.rig.rightArmGroup.rotation.x = -Math.PI / 2 + Math.sin(timeAcc * 5 + idx) * 0.5;
