@@ -242,7 +242,6 @@
                     mohamed.position.set(-12, 0, 0);
                     scene.add(mohamed);
 
-                    // Giant Cacao Tree
                     const bigTree = new THREE.Mesh(
                         new THREE.CylinderGeometry(1.2, 1.8, 14),
                         new THREE.MeshStandardMaterial({ color: 0x5c4033 })
@@ -256,7 +255,6 @@
                     bigTree.add(leaves);
                     scene.add(bigTree);
 
-                    // Cacao Bean
                     const beanMat = new THREE.MeshStandardMaterial({ color: 0x3d2314 });
                     const bean = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), beanMat);
                     bean.scale.set(0.6, 1.2, 0.6);
@@ -313,38 +311,37 @@
             },
             {
                 title: "3. Warriors of Ancient Civilizations",
-                desc: "Full armies clash in epic combat with raised swords as Mohamed leads his warriors in battle.",
-                camPos: [0, 12, 30],
+                desc: "Armies clash in a side-profile view with raised swords as Mohamed leads his warriors in battle.",
+                camPos: [0, 10, 26],
                 camLookAt: [0, 3, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0xddb892);
                     const warriors = [];
 
-                    // Friendly Army (Blue/Red Mohamed force)
                     for (let i = -2; i <= 2; i++) {
                         const soldier = createRobloxR6(0x2a9d8f, 0x1d3557);
                         soldier.rig.swordGroup.visible = true;
-                        soldier.position.set(i * 3 - 2, 0, 2);
+                        soldier.position.set(-3.5, 0, i * 3.5);
+                        soldier.rotation.y = Math.PI / 2;
                         scene.add(soldier);
-                        warriors.push({ mesh: soldier, side: 1 });
+                        warriors.push(soldier);
                     }
 
-                    // Enemy Army
                     for (let i = -2; i <= 2; i++) {
                         const enemy = createRobloxR6(0xd90429, 0x2b2d42);
                         enemy.rig.swordGroup.visible = true;
-                        enemy.position.set(i * 3 - 2, 0, -2);
-                        enemy.rotation.y = Math.PI;
+                        enemy.position.set(3.5, 0, i * 3.5);
+                        enemy.rotation.y = -Math.PI / 2;
                         scene.add(enemy);
-                        warriors.push({ mesh: enemy, side: -1 });
+                        warriors.push(enemy);
                     }
 
                     return {
-                        actors: warriors.map(w => w.mesh),
+                        actors: warriors,
                         update: () => {
                             const time = Date.now() * 0.01;
-                            warriors.forEach(w => {
-                                w.mesh.rig.rightArmGroup.rotation.x = -Math.PI / 3 + Math.sin(time + w.mesh.position.x) * 0.8;
+                            warriors.forEach((w, idx) => {
+                                w.rig.rightArmGroup.rotation.x = -Math.PI / 3 + Math.sin(time + idx) * 0.8;
                             });
                         }
                     };
@@ -352,26 +349,31 @@
             },
             {
                 title: "4. Ambushed and Cast Adrift",
-                desc: "Trapped inside a barrel by enemies at the ocean castle, Mohamed is thrown into the roaring sea.",
-                camPos: [0, 12, 28],
+                desc: "An enemy guard forces Mohamed into a barrel at the castle edge and pushes him off into the ocean waves.",
+                camPos: [0, 12, 30],
                 camLookAt: [0, 3, 0],
                 setup: () => {
-                    worldGround.material.color.setHex(0x0077b6); // Sea
+                    worldGround.material.color.setHex(0x0077b6);
 
-                    // Castle on Cliff
                     const cliff = new THREE.Mesh(
-                        new THREE.BoxGeometry(20, 8, 15),
+                        new THREE.BoxGeometry(16, 8, 15),
                         new THREE.MeshStandardMaterial({ color: 0x555555 })
                     );
-                    cliff.position.set(-15, 3, -5);
+                    cliff.position.set(-16, 3, -5);
                     scene.add(cliff);
 
                     const castle = new THREE.Mesh(
                         new THREE.BoxGeometry(10, 10, 8),
                         new THREE.MeshStandardMaterial({ color: 0x8d99ae })
                     );
-                    castle.position.set(-15, 12, -5);
+                    castle.position.set(-16, 12, -5);
                     scene.add(castle);
+
+                    // Enemy guard on the cliff
+                    const guard = createRobloxR6(0xd90429, 0x111111);
+                    guard.position.set(-11, 7, 0);
+                    guard.rotation.y = Math.PI / 2;
+                    scene.add(guard);
 
                     // Barrel with Mohamed inside
                     const barrelGroup = new THREE.Group();
@@ -388,22 +390,29 @@
                     head.position.y = 2;
                     barrelGroup.add(head);
 
-                    barrelGroup.position.set(-15, 8, 0);
+                    barrelGroup.position.set(-9, 8.8, 0);
                     scene.add(barrelGroup);
 
                     let timeAcc = 0;
                     return {
-                        actors: [cliff, castle, barrelGroup],
+                        actors: [cliff, castle, guard, barrelGroup],
                         update: () => {
                             timeAcc += 0.03;
-                            if (barrelGroup.position.x < 5) {
-                                barrelGroup.position.x += 0.15;
-                                if (barrelGroup.position.y > 1) {
-                                    barrelGroup.position.y -= 0.12;
-                                }
-                                barrelGroup.rotation.z -= 0.08;
+
+                            // Guard pushes barrel off cliff
+                            if (barrelGroup.position.x < -7) {
+                                guard.rig.leftArmGroup.rotation.x = -Math.PI / 2;
+                                guard.rig.rightArmGroup.rotation.x = -Math.PI / 2;
+                                guard.position.x += 0.03;
+                                barrelGroup.position.x += 0.03;
+                            } else if (barrelGroup.position.y > 0.8) {
+                                // Falling into ocean
+                                barrelGroup.position.x += 0.12;
+                                barrelGroup.position.y -= 0.22;
+                                barrelGroup.rotation.z -= 0.1;
                             } else {
-                                // Floating in sea
+                                // Floating & moving across ocean
+                                barrelGroup.position.x += 0.08;
                                 barrelGroup.position.y = 0.5 + Math.sin(timeAcc * 2) * 0.3;
                                 barrelGroup.rotation.z = Math.sin(timeAcc) * 0.2;
                             }
@@ -443,7 +452,6 @@
                 setup: () => {
                     worldGround.material.color.setHex(0xdda15e);
 
-                    // Large Shop Structure
                     const shop = new THREE.Mesh(
                         new THREE.BoxGeometry(10, 5, 5),
                         new THREE.MeshStandardMaterial({ color: 0x6b705c })
@@ -466,7 +474,6 @@
                     alizar.position.set(2, 0, -1);
                     scene.add(alizar);
 
-                    // Crowd of Customers
                     const crowd = [];
                     for (let i = -3; i <= 3; i++) {
                         const customer = createRobloxR6(Math.random() * 0xffffff, 0x222222);
@@ -481,40 +488,70 @@
             },
             {
                 title: "7. Corruption and Destruction",
-                desc: "Corrupt forces burn down the A&M Snacks shop in an attempt to destroy Mohamed's honest business.",
+                desc: "Corrupt forces burn down the wooden A&M Snacks shop in an attempt to destroy Mohamed's honest business.",
                 camPos: [0, 10, 22],
                 camLookAt: [0, 3, 0],
                 setup: () => {
-                    worldGround.material.color.setHex(0x1a1a1a);
+                    worldGround.material.color.setHex(0x221c16);
 
-                    // Burned Shop Structure
+                    // Wooden Shop Structure
                     const shop = new THREE.Mesh(
                         new THREE.BoxGeometry(10, 5, 5),
-                        new THREE.MeshStandardMaterial({ color: 0x222222 })
+                        new THREE.MeshStandardMaterial({ color: 0x6e4726, roughness: 0.9 })
                     );
                     shop.position.set(0, 2.5, -4);
-                    scene.add(shop);
+
+                    const roof = new THREE.Mesh(
+                        new THREE.ConeGeometry(8, 3, 4),
+                        new THREE.MeshStandardMaterial({ color: 0x4a2a18 })
+                    );
+                    roof.position.set(0, 6.5, -4);
+                    roof.rotation.y = Math.PI / 4;
+                    scene.add(shop, roof);
+
+                    // Dynamic Fire Light
+                    const fireLight = new THREE.PointLight(0xff5500, 3, 30);
+                    fireLight.position.set(0, 5, -4);
+                    scene.add(fireLight);
 
                     const corruptOfficial = createRobloxR6(0x111111, 0x000000);
                     corruptOfficial.position.set(5, 0, 2);
                     scene.add(corruptOfficial);
 
-                    // Animated Fire Particles
+                    // Fire & Smoke Particles
                     const fireParticles = [];
-                    const fireMat = new THREE.MeshBasicMaterial({ color: 0xff4500 });
-                    for (let i = 0; i < 20; i++) {
-                        const p = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), fireMat);
-                        p.position.set((Math.random() - 0.5) * 8, Math.random() * 5, -4 + (Math.random() - 0.5) * 3);
+                    const fireColors = [0xff2200, 0xff7700, 0xffcc00];
+
+                    for (let i = 0; i < 35; i++) {
+                        const col = fireColors[Math.floor(Math.random() * fireColors.length)];
+                        const p = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.5, 0.5, 0.5),
+                            new THREE.MeshBasicMaterial({ color: col })
+                        );
+                        p.position.set(
+                            (Math.random() - 0.5) * 9,
+                            Math.random() * 6,
+                            -4 + (Math.random() - 0.5) * 4
+                        );
                         scene.add(p);
                         fireParticles.push(p);
                     }
 
                     return {
-                        actors: [shop, corruptOfficial, ...fireParticles],
+                        actors: [shop, roof, fireLight, corruptOfficial, ...fireParticles],
                         update: () => {
+                            const time = Date.now() * 0.005;
+                            fireLight.intensity = 2.5 + Math.sin(time * 8) * 1.5;
+
                             fireParticles.forEach(p => {
-                                p.position.y += 0.1;
-                                if (p.position.y > 7) p.position.y = 1;
+                                p.position.y += 0.12;
+                                p.scale.multiplyScalar(0.97);
+                                if (p.position.y > 8 || p.scale.x < 0.1) {
+                                    p.position.y = 0.5;
+                                    p.position.x = (Math.random() - 0.5) * 9;
+                                    p.position.z = -4 + (Math.random() - 0.5) * 4;
+                                    p.scale.set(1, 1, 1);
+                                }
                             });
                         }
                     };
@@ -528,7 +565,6 @@
                 setup: () => {
                     worldGround.material.color.setHex(0x52b788);
 
-                    // Mirja Shrine Podium
                     const podium = new THREE.Mesh(
                         new THREE.CylinderGeometry(4, 5, 2, 8),
                         new THREE.MeshStandardMaterial({ color: 0xd8f3dc })
