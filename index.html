@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Journey of Mohamed - Extended 3D Storyboard</title>
+    <title>The Journey of Mohamed - Enhanced 3D Storyboard</title>
     <style>
         body, html {
             margin: 0;
@@ -27,17 +27,17 @@
 
         #story-ui {
             position: absolute;
-            bottom: 30px;
+            bottom: 25px;
             left: 50%;
             transform: translateX(-50%);
-            width: 85%;
-            max-width: 900px;
-            background: rgba(12, 16, 24, 0.92);
-            backdrop-filter: blur(12px);
-            border: 2px solid rgba(0, 198, 255, 0.4);
+            width: 88%;
+            max-width: 950px;
+            background: rgba(10, 14, 22, 0.94);
+            backdrop-filter: blur(14px);
+            border: 2px solid rgba(0, 198, 255, 0.5);
             border-radius: 12px;
             padding: 20px 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.85);
+            box-shadow: 0 10px 35px rgba(0,0,0,0.9);
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -49,7 +49,7 @@
             font-size: 22px;
             color: #ffcc00;
             letter-spacing: 1px;
-            text-shadow: 0 0 10px rgba(255, 204, 0, 0.4);
+            text-shadow: 0 0 12px rgba(255, 204, 0, 0.5);
         }
 
         #scene-description {
@@ -104,8 +104,8 @@
     <div id="canvas-container"></div>
 
     <div id="story-ui">
-        <h2 id="scene-title">Loading...</h2>
-        <p id="scene-description">Initializing environment...</p>
+        <h2 id="scene-title">Loading Storyboard...</h2>
+        <p id="scene-description">Building high-detail 3D environments...</p>
         <div class="controls-row">
             <span id="scene-counter">SCENE 1 / 8</span>
             <div class="btn-group">
@@ -127,12 +127,18 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(renderer.domElement);
 
         const sun = new THREE.DirectionalLight(0xffffff, 1.3);
         sun.position.set(50, 100, 50);
         sun.castShadow = true;
-        scene.add(sun, new THREE.AmbientLight(0x808080));
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
+        scene.add(sun);
+
+        const ambientLight = new THREE.AmbientLight(0x909090);
+        scene.add(ambientLight);
 
         const worldGround = new THREE.Mesh(
             new THREE.BoxGeometry(300, 2, 300),
@@ -146,8 +152,8 @@
         grid.position.y = 0.01;
         scene.add(grid);
 
-        // Natural R6 Rigging with Stick/Sword natural grip
-        function createRobloxR6(shirtColor = 0x00a2ff, legColor = 0x111111, headColor = 0xf5cd2f) {
+        // Helper: Create Roblox R6 Character with modular accessories
+        function createRobloxR6(shirtColor = 0x00a2ff, legColor = 0x111111, headColor = 0xf5cd2f, accessoryType = null) {
             const avatar = new THREE.Group();
             const torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor });
             const headMat = new THREE.MeshStandardMaterial({ color: headColor });
@@ -158,16 +164,30 @@
 
             const torso = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 1), torsoMat);
             torso.position.y = 3;
+            torso.castShadow = true;
             avatar.add(torso);
 
             const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMat);
             head.position.y = 4.6;
+            head.castShadow = true;
             avatar.add(head);
+
+            // Accessories (Helmets, Turban, Crown)
+            if (accessoryType === 'helmet') {
+                const helmet = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.6, 1.35), steelMat);
+                helmet.position.y = 5.2;
+                avatar.add(helmet);
+            } else if (accessoryType === 'crown') {
+                const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.6, 0.5, 6), goldMat);
+                crown.position.y = 5.3;
+                avatar.add(crown);
+            }
 
             const leftArmGroup = new THREE.Group();
             leftArmGroup.position.set(-1.5, 4, 0);
             const leftArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), armMat);
             leftArm.position.y = -1;
+            leftArm.castShadow = true;
             leftArmGroup.add(leftArm);
             avatar.add(leftArmGroup);
 
@@ -175,12 +195,13 @@
             rightArmGroup.position.set(1.5, 4, 0);
             const rightArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), armMat);
             rightArm.position.y = -1;
+            rightArm.castShadow = true;
             rightArmGroup.add(rightArm);
 
-            // Stick/Sword Grip attached naturally at hand
+            // Natural stick-grip sword setup
             const swordGroup = new THREE.Group();
             swordGroup.position.set(0, -1.8, 0.2); 
-            swordGroup.rotation.x = Math.PI / 2.2; // Holds sword pointing forward like a stick/bat
+            swordGroup.rotation.x = Math.PI / 2.2; 
 
             const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8), new THREE.MeshStandardMaterial({ color: 0x333333 }));
             handle.position.y = 0;
@@ -202,6 +223,7 @@
             leftLegGroup.position.set(-0.55, 2, 0);
             const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2, 1), legMat);
             leftLeg.position.y = -1;
+            leftLeg.castShadow = true;
             leftLegGroup.add(leftLeg);
             avatar.add(leftLegGroup);
 
@@ -209,6 +231,7 @@
             rightLegGroup.position.set(0.55, 2, 0);
             const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2, 1), legMat);
             rightLeg.position.y = -1;
+            rightLeg.castShadow = true;
             rightLegGroup.add(rightLeg);
             avatar.add(rightLegGroup);
 
@@ -243,63 +266,119 @@
             }
         }
 
+        // Environment Prop Builders
+        function createTorch(x, y, z) {
+            const torchGroup = new THREE.Group();
+            torchGroup.position.set(x, y, z);
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3), new THREE.MeshStandardMaterial({ color: 0x3d2314 }));
+            pole.position.y = 1.5;
+            torchGroup.add(pole);
+
+            const light = new THREE.PointLight(0xffaa00, 2, 12);
+            light.position.y = 3;
+            torchGroup.add(light);
+
+            const flame = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.4), new THREE.MeshBasicMaterial({ color: 0xff4500 }));
+            flame.position.y = 3;
+            torchGroup.add(flame);
+
+            torchGroup.light = light;
+            return torchGroup;
+        }
+
         const storyData = [
             {
                 title: "1. A Childhood Amidst Cacao Fields",
-                desc: "Mohamed walks to a giant cocoa tree, plucks a fresh cacao pod, and holds it in his hands to inspect his harvest.",
-                camPos: [-10, 10, 24],
+                desc: "Mohamed explores a high-detail cacao plantation with lush trees, fences, and wheelbarrows, plucking a cacao pod and proudly holding it in his hands.",
+                camPos: [-12, 11, 26],
                 camLookAt: [0, 4, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0x2d6a4f);
+
+                    const props = [];
                     const mohamed = createRobloxR6(0x2a9d8f, 0x264653, 0xe9c46a);
-                    mohamed.position.set(-14, 0, 4);
+                    mohamed.position.set(-15, 0, 4);
                     scene.add(mohamed);
+                    props.push(mohamed);
 
-                    const bigTree = new THREE.Mesh(
-                        new THREE.CylinderGeometry(1.4, 2.0, 15),
-                        new THREE.MeshStandardMaterial({ color: 0x4a2e1b })
-                    );
-                    bigTree.position.set(0, 7.5, 0);
-                    const leaves = new THREE.Mesh(
-                        new THREE.SphereGeometry(7, 12, 12),
-                        new THREE.MeshStandardMaterial({ color: 0x1b4332, roughness: 0.6 })
-                    );
-                    leaves.position.y = 8;
-                    bigTree.add(leaves);
-                    scene.add(bigTree);
+                    // Giant Cocoa Trees
+                    const treeMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.9 });
+                    const leafMat = new THREE.MeshStandardMaterial({ color: 0x1b4332, roughness: 0.6 });
 
-                    for (let i = 0; i < 4; i++) {
-                        const sideTree = bigTree.clone();
-                        sideTree.scale.set(0.6, 0.6, 0.6);
-                        sideTree.position.set((i - 2) * 12 + 4, 4.5, -12);
-                        scene.add(sideTree);
+                    for (let i = 0; i < 7; i++) {
+                        const tree = new THREE.Group();
+                        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 14), treeMat);
+                        trunk.position.y = 7;
+                        tree.add(trunk);
+
+                        const leaves = new THREE.Mesh(new THREE.SphereGeometry(6, 10, 10), leafMat);
+                        leaves.position.y = 12;
+                        tree.add(leaves);
+
+                        const posX = (i % 4) * 12 - 18;
+                        const posZ = Math.floor(i / 4) * -16 - 2;
+                        tree.position.set(posX, 0, posZ);
+                        scene.add(tree);
+                        props.push(tree);
                     }
+
+                    // Wooden Plantation Fence
+                    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x6e473b });
+                    for (let f = -20; f <= 20; f += 4) {
+                        const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3, 0.4), fenceMat);
+                        post.position.set(f, 1.5, 12);
+                        const rail = new THREE.Mesh(new THREE.BoxGeometry(4, 0.3, 0.2), fenceMat);
+                        rail.position.set(f + 2, 2, 12);
+                        scene.add(post, rail);
+                        props.push(post, rail);
+                    }
+
+                    // Wooden Wheelbarrow with harvested pods
+                    const barrow = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 2), fenceMat);
+                    barrow.position.set(4, 1, 3);
+                    scene.add(barrow);
+                    props.push(barrow);
 
                     const beanMat = new THREE.MeshStandardMaterial({ color: 0x6e3b12, roughness: 0.4 });
                     const bean = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 10), beanMat);
                     bean.scale.set(0.6, 1.4, 0.6);
                     bean.position.set(-0.5, 7.0, 1.4);
                     scene.add(bean);
+                    props.push(bean);
+
+                    // Floating pollen particles
+                    const pollenParticles = [];
+                    const pollenMat = new THREE.MeshBasicMaterial({ color: 0xddff99, transparent: true, opacity: 0.7 });
+                    for (let p = 0; p < 25; p++) {
+                        const particle = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), pollenMat);
+                        particle.position.set((Math.random() - 0.5) * 30, Math.random() * 10, (Math.random() - 0.5) * 30);
+                        scene.add(particle);
+                        pollenParticles.push(particle);
+                        props.push(particle);
+                    }
 
                     let grabbed = false;
                     let ticks = 0;
                     return {
-                        actors: [mohamed, bigTree, bean],
+                        actors: props,
                         update: () => {
                             ticks += 0.02;
                             const moving = animateBotWalking(mohamed, -1.2, 1.8, 0.06);
+
+                            pollenParticles.forEach(pt => {
+                                pt.position.y += Math.sin(ticks + pt.position.x) * 0.02;
+                            });
+
                             if (!moving) {
                                 if (!grabbed) {
                                     mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 1.3;
                                     if (ticks > 2.5) {
                                         scene.remove(bean);
                                         mohamed.rig.rightArmGroup.add(bean);
-                                        // Place bean clearly in hand
                                         bean.position.set(0, -2.0, 0.6);
                                         grabbed = true;
                                     }
                                 } else {
-                                    // Hold the cacao bean visibly up front with both hands
                                     mohamed.rotation.y = Math.PI / 4;
                                     mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 2.2;
                                     mohamed.rig.rightArmGroup.rotation.y = -Math.PI / 6;
@@ -313,29 +392,60 @@
             },
             {
                 title: "2. Ascension to Leadership",
-                desc: "Mohamed hands out food bowls to villagers. Upon receiving their bowl, each villager walks off happy to make room for the next.",
-                camPos: [0, 10, 22],
+                desc: "Mohamed hands out bowls of steaming food in the stone courtyard. Once villagers receive their meal, they bow and walk off, making space for the queue.",
+                camPos: [0, 12, 24],
                 camLookAt: [0, 4, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0xd4a373);
+                    const props = [];
 
-                    const castle = new THREE.Mesh(
-                        new THREE.BoxGeometry(22, 14, 8),
-                        new THREE.MeshStandardMaterial({ color: 0x8d99ae })
+                    // Detailed Castle Wall with Banners & Torches
+                    const castleWall = new THREE.Mesh(
+                        new THREE.BoxGeometry(32, 16, 6),
+                        new THREE.MeshStandardMaterial({ color: 0x727d8e, roughness: 0.8 })
                     );
-                    castle.position.set(0, 7, -10);
-                    scene.add(castle);
+                    castleWall.position.set(0, 8, -10);
+                    scene.add(castleWall);
+                    props.push(castleWall);
+
+                    // Royal Banners
+                    const bannerMat = new THREE.MeshStandardMaterial({ color: 0x00c6ff });
+                    for (let b = -10; b <= 10; b += 20) {
+                        const banner = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 0.2), bannerMat);
+                        banner.position.set(b, 10, -6.8);
+                        scene.add(banner);
+                        props.push(banner);
+                    }
+
+                    // Wall Torches
+                    const t1 = createTorch(-8, 4, -6.5);
+                    const t2 = createTorch(8, 4, -6.5);
+                    scene.add(t1, t2);
+                    props.push(t1, t2);
 
                     const foodCauldron = new THREE.Mesh(
-                        new THREE.CylinderGeometry(1.5, 1.2, 2, 12),
-                        new THREE.MeshStandardMaterial({ color: 0x4a4e69, metalness: 0.8 })
+                        new THREE.CylinderGeometry(1.6, 1.3, 2.2, 12),
+                        new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 })
                     );
-                    foodCauldron.position.set(-2, 1, 0);
+                    foodCauldron.position.set(-2, 1.1, 0);
                     scene.add(foodCauldron);
+                    props.push(foodCauldron);
 
-                    const mohamed = createRobloxR6(0x2a9d8f, 0x1d3557);
+                    // Steaming particles from cauldron
+                    const steamMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
+                    const steamList = [];
+                    for (let s = 0; s < 12; s++) {
+                        const stm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), steamMat);
+                        stm.position.set(-2 + (Math.random() - 0.5), 2.2 + Math.random() * 2, (Math.random() - 0.5));
+                        scene.add(stm);
+                        steamList.push(stm);
+                        props.push(stm);
+                    }
+
+                    const mohamed = createRobloxR6(0x2a9d8f, 0x1d3557, 0xf5cd2f, 'crown');
                     mohamed.position.set(-0.5, 0, 0);
                     scene.add(mohamed);
+                    props.push(mohamed);
 
                     const bowlMat = new THREE.MeshStandardMaterial({ color: 0xe9c46a });
                     const heldBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.4, 0.5), bowlMat);
@@ -356,23 +466,29 @@
 
                         scene.add(villager);
                         villagers.push(villager);
+                        props.push(villager);
                     }
 
                     let activeIndex = 0;
                     let serveTimer = 0;
 
                     return {
-                        actors: [mohamed, castle, foodCauldron, ...villagers],
+                        actors: props,
                         update: () => {
                             serveTimer += 0.03;
+
+                            // Steam animation
+                            steamList.forEach(s => {
+                                s.position.y += 0.04;
+                                if (s.position.y > 5) s.position.y = 2.2;
+                            });
 
                             mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 3 + Math.sin(serveTimer * 2) * 0.15;
                             mohamed.rig.rightArmGroup.rotation.y = -Math.PI / 6;
 
                             villagers.forEach((v, idx) => {
                                 if (v.hasReceived) {
-                                    // Walk off holding the bowl
-                                    animateBotWalking(v, 14, 12, 0.06);
+                                    animateBotWalking(v, 16, 14, 0.06);
                                     v.receivedBowl.visible = true;
                                     v.rig.leftArmGroup.rotation.x = -Math.PI / 2.5;
                                 } else {
@@ -400,67 +516,79 @@
             },
             {
                 title: "3. Full-Scale War for Hums",
-                desc: "Warriors holding swords like sticks battle along the frontlines, clashing their blades together with sparks flying.",
-                camPos: [0, 12, 28],
+                desc: "An intense battlefield with barricades, war drums, shattered arrows, and clashing soldiers swinging swords like sticks with bright sparks bursting.",
+                camPos: [0, 13, 28],
                 camLookAt: [0, 3, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0x5c4d3c);
+                    const props = [];
 
-                    // Barricades
+                    // Battlefield Obstacles & War Drums
                     const barricadeMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.9 });
-                    for (let b = -3; b <= 3; b += 2) {
-                        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.4, 4, 6), barricadeMat);
-                        spike.position.set(b * 3, 1.5, -2);
+                    for (let b = -4; b <= 4; b += 2) {
+                        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.5, 4.5, 6), barricadeMat);
+                        spike.position.set(b * 3, 1.8, -3);
+                        spike.rotation.z = (Math.random() - 0.5) * 0.4;
                         scene.add(spike);
+                        props.push(spike);
                     }
 
+                    // Broken Arrows on the ground
+                    const arrowMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+                    for (let a = 0; a < 15; a++) {
+                        const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2), arrowMat);
+                        arrow.position.set((Math.random() - 0.5) * 20, 0.2, (Math.random() - 0.5) * 12);
+                        arrow.rotation.x = Math.PI / 2 + (Math.random() - 0.5);
+                        scene.add(arrow);
+                        props.push(arrow);
+                    }
+
+                    // Smoke Particles
                     const smokeParticles = [];
-                    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.5 });
-                    for (let s = 0; s < 20; s++) {
-                        const smk = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), smokeMat);
-                        smk.position.set((Math.random() - 0.5) * 25, Math.random() * 8, (Math.random() - 0.5) * 15);
+                    const smokeMat = new THREE.MeshBasicMaterial({ color: 0xff3300, transparent: true, opacity: 0.5 });
+                    for (let s = 0; s < 30; s++) {
+                        const smk = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), smokeMat);
+                        smk.position.set((Math.random() - 0.5) * 30, Math.random() * 10, (Math.random() - 0.5) * 20);
                         scene.add(smk);
                         smokeParticles.push(smk);
+                        props.push(smk);
                     }
 
                     const warriors = [];
-
-                    // Frontline Clashing Pair & Ranks
                     for (let col = -2; col <= 2; col++) {
-                        // Blue Warrior (Left)
-                        const blue = createRobloxR6(0x2a9d8f, 0x1d3557);
+                        const blue = createRobloxR6(0x2a9d8f, 0x1d3557, 0xf5cd2f, 'helmet');
                         blue.rig.swordGroup.visible = true;
                         blue.position.set(-1.8, 0, col * 3);
                         blue.rotation.y = Math.PI / 2;
                         scene.add(blue);
 
-                        // Red Warrior (Right)
-                        const red = createRobloxR6(0xd90429, 0x2b2d42);
+                        const red = createRobloxR6(0xd90429, 0x2b2d42, 0xf5cd2f, 'helmet');
                         red.rig.swordGroup.visible = true;
                         red.position.set(1.8, 0, col * 3);
                         red.rotation.y = -Math.PI / 2;
                         scene.add(red);
 
                         warriors.push({ blue, red, zIndex: col });
+                        props.push(blue, red);
                     }
 
                     // Sword Clash Sparks
-                    const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                    const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffff88 });
                     const clashSparks = [];
                     for (let c = -2; c <= 2; c++) {
-                        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), sparkMat);
+                        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), sparkMat);
                         spark.position.set(0, 3.2, c * 3);
                         scene.add(spark);
                         clashSparks.push(spark);
+                        props.push(spark);
                     }
 
                     return {
-                        actors: [...warriors.flatMap(w => [w.blue, w.red]), ...smokeParticles, ...clashSparks],
+                        actors: props,
                         update: () => {
                             const time = Date.now() * 0.012;
 
                             warriors.forEach((w, idx) => {
-                                // Arm swinging swords together in direct clash
                                 const swing = Math.sin(time + idx * 1.5) * 0.7;
                                 
                                 w.blue.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 + swing;
@@ -469,12 +597,11 @@
                                 w.red.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 - swing;
                                 w.red.rig.rightArmGroup.rotation.y = Math.PI / 8;
 
-                                // Sparks flash on strike point
                                 clashSparks[idx].visible = Math.abs(swing) < 0.25;
                             });
 
                             smokeParticles.forEach(p => {
-                                p.position.y += 0.06;
+                                p.position.y += 0.08;
                                 if (p.position.y > 10) p.position.y = 1;
                             });
                         }
@@ -483,45 +610,50 @@
             },
             {
                 title: "4. Cast Adrift to Save Mohamed",
-                desc: "Mohamed's loyal companions push him off the cliff in a wooden barrel into the ocean waves to protect him from approaching enemies.",
-                camPos: [0, 14, 32],
+                desc: "Mohamed's loyal companions push him off the cliff in a wooden barrel into crashing ocean waves as red enemy guards breach the castle walls.",
+                camPos: [0, 15, 34],
                 camLookAt: [0, 3, 0],
                 setup: () => {
-                    worldGround.material.color.setHex(0x006699);
+                    worldGround.material.color.setHex(0x005f73);
+                    const props = [];
 
                     const cliff = new THREE.Mesh(
-                        new THREE.BoxGeometry(18, 10, 16),
-                        new THREE.MeshStandardMaterial({ color: 0x4a4e69 })
+                        new THREE.BoxGeometry(20, 12, 18),
+                        new THREE.MeshStandardMaterial({ color: 0x4a4e69, roughness: 0.9 })
                     );
-                    cliff.position.set(-18, 4, -5);
+                    cliff.position.set(-18, 5, -5);
                     scene.add(cliff);
+                    props.push(cliff);
 
                     const castle = new THREE.Mesh(
-                        new THREE.BoxGeometry(12, 12, 10),
+                        new THREE.BoxGeometry(14, 14, 12),
                         new THREE.MeshStandardMaterial({ color: 0x8d99ae })
                     );
-                    castle.position.set(-18, 15, -5);
+                    castle.position.set(-18, 17, -5);
                     scene.add(castle);
+                    props.push(castle);
 
                     const enemyGuards = [];
-                    for (let i = 0; i < 3; i++) {
-                        const enemy = createRobloxR6(0xd90429, 0x111111);
-                        enemy.position.set(-23 + i * 2, 9, -6 + i * 2);
+                    for (let i = 0; i < 4; i++) {
+                        const enemy = createRobloxR6(0xd90429, 0x111111, 0xf5cd2f, 'helmet');
+                        enemy.position.set(-24 + i * 2, 11, -7 + i * 2);
                         enemy.rotation.y = Math.PI / 2;
                         enemy.rig.swordGroup.visible = true;
                         scene.add(enemy);
                         enemyGuards.push(enemy);
+                        props.push(enemy);
                     }
 
                     const ally1 = createRobloxR6(0x2a9d8f, 0x1d3557);
-                    ally1.position.set(-12, 9, -2);
+                    ally1.position.set(-12, 11, -2);
                     ally1.rotation.y = Math.PI / 2;
 
                     const ally2 = createRobloxR6(0x2a9d8f, 0x1d3557);
-                    ally2.position.set(-12, 9, 2);
+                    ally2.position.set(-12, 11, 2);
                     ally2.rotation.y = Math.PI / 2;
 
                     scene.add(ally1, ally2);
+                    props.push(ally1, ally2);
 
                     const barrelGroup = new THREE.Group();
                     const barrel = new THREE.Mesh(
@@ -537,21 +669,23 @@
                     head.position.y = 2.1;
                     barrelGroup.add(head);
 
-                    barrelGroup.position.set(-10, 10.8, 0);
+                    barrelGroup.position.set(-10, 12.8, 0);
                     scene.add(barrelGroup);
+                    props.push(barrelGroup);
 
                     const splashes = [];
                     const splashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-                    for (let i = 0; i < 10; i++) {
-                        const sp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), splashMat);
+                    for (let i = 0; i < 15; i++) {
+                        const sp = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), splashMat);
                         sp.visible = false;
                         scene.add(sp);
                         splashes.push(sp);
+                        props.push(sp);
                     }
 
                     let timeAcc = 0;
                     return {
-                        actors: [cliff, castle, ...enemyGuards, ally1, ally2, barrelGroup, ...splashes],
+                        actors: props,
                         update: () => {
                             timeAcc += 0.025;
 
@@ -570,13 +704,13 @@
                                 barrelGroup.position.x += 0.025;
                             } else if (barrelGroup.position.y > 0.8) {
                                 barrelGroup.position.x += 0.12;
-                                barrelGroup.position.y -= 0.25;
+                                barrelGroup.position.y -= 0.28;
                                 barrelGroup.rotation.z -= 0.12;
 
                                 if (barrelGroup.position.y <= 1.2) {
                                     splashes.forEach((sp) => {
                                         sp.visible = true;
-                                        sp.position.set(barrelGroup.position.x + (Math.random() - 0.5) * 3, 1 + Math.random() * 2, (Math.random() - 0.5) * 3);
+                                        sp.position.set(barrelGroup.position.x + (Math.random() - 0.5) * 4, 1 + Math.random() * 2.5, (Math.random() - 0.5) * 4);
                                     });
                                 }
                             } else {
@@ -591,11 +725,38 @@
             },
             {
                 title: "5. Arrival in Ginga (Texas)",
-                desc: "Washing ashore on the desert beach of Ginga, Mohamed breaks free from the barrel and bonds with Alizar.",
-                camPos: [0, 8, 20],
+                desc: "Mohamed washes ashore on a desert beach framed by palm trees, rocks, and ocean foam, reuniting with Alizar.",
+                camPos: [0, 9, 22],
                 camLookAt: [0, 2, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0xe0a96d);
+                    const props = [];
+
+                    // Desert Beach Palm Trees
+                    for (let p = -12; p <= 12; p += 24) {
+                        const palm = new THREE.Group();
+                        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 10), new THREE.MeshStandardMaterial({ color: 0x7f5539 }));
+                        trunk.position.y = 5;
+                        trunk.rotation.z = (p > 0 ? -1 : 1) * 0.2;
+                        palm.add(trunk);
+
+                        const top = new THREE.Mesh(new THREE.SphereGeometry(3.5, 8, 8), new THREE.MeshStandardMaterial({ color: 0x38b000 }));
+                        top.position.set(p > 0 ? -1 : 1, 9.5, 0);
+                        palm.add(top);
+
+                        palm.position.set(p, 0, -6);
+                        scene.add(palm);
+                        props.push(palm);
+                    }
+
+                    // Coastal Rocks
+                    const rockMat = new THREE.MeshStandardMaterial({ color: 0x6c757d });
+                    for (let r = 0; r < 5; r++) {
+                        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2 + Math.random()), rockMat);
+                        rock.position.set((r - 2) * 5, 0.5, -3 + (r % 2) * 2);
+                        scene.add(rock);
+                        props.push(rock);
+                    }
 
                     const b1 = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 1.8, 8, 1, false, 0, Math.PI), new THREE.MeshStandardMaterial({ color: 0x6f4e37 }));
                     b1.position.set(-6, 0.8, 0);
@@ -608,9 +769,10 @@
                     alizar.position.set(7, 0, 0);
 
                     scene.add(b1, mohamed, alizar);
+                    props.push(b1, mohamed, alizar);
 
                     return {
-                        actors: [b1, mohamed, alizar],
+                        actors: props,
                         update: () => {
                             animateBotWalking(mohamed, -1.2, 0, 0.05);
                             const active = animateBotWalking(alizar, 1.2, 0, 0.05);
@@ -624,60 +786,69 @@
             },
             {
                 title: "6. A&M Snack Boom (Chocolate Trade)",
-                desc: "Zoomed out view of A&M Snacks shop: Mohamed and Alizar give chocolate bars while customers hand over green cash notes in return.",
-                camPos: [0, 14, 32], // Zoomed out camera
+                desc: "A wide, zoomed-out view of the thriving A&M Snack Shop: Mohamed and Alizar hand chocolate bars to customers who offer green money notes.",
+                camPos: [0, 15, 34],
                 camLookAt: [0, 2.5, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0xdda15e);
+                    const props = [];
 
                     const shop = new THREE.Mesh(
-                        new THREE.BoxGeometry(12, 6, 6),
+                        new THREE.BoxGeometry(14, 6.5, 6.5),
                         new THREE.MeshStandardMaterial({ color: 0x8b5a2b })
                     );
-                    shop.position.set(0, 3, -4);
+                    shop.position.set(0, 3.25, -4);
 
                     const roof = new THREE.Mesh(
-                        new THREE.ConeGeometry(10, 4, 4),
+                        new THREE.ConeGeometry(11, 4.5, 4),
                         new THREE.MeshStandardMaterial({ color: 0xb0411b })
                     );
-                    roof.position.set(0, 8, -4);
+                    roof.position.set(0, 8.75, -4);
                     roof.rotation.y = Math.PI / 4;
 
                     const counter = new THREE.Mesh(
-                        new THREE.BoxGeometry(10, 1.8, 1.2),
+                        new THREE.BoxGeometry(11, 1.8, 1.2),
                         new THREE.MeshStandardMaterial({ color: 0x5c3d1e })
                     );
                     counter.position.set(0, 0.9, 0.2);
 
-                    const sign = new THREE.Mesh(new THREE.BoxGeometry(7, 1.4, 0.3), new THREE.MeshStandardMaterial({ color: 0xffd166 }));
-                    sign.position.set(0, 5, -0.8);
+                    const sign = new THREE.Mesh(new THREE.BoxGeometry(8, 1.5, 0.3), new THREE.MeshStandardMaterial({ color: 0xffd166 }));
+                    sign.position.set(0, 5.5, -0.7);
                     scene.add(shop, roof, counter, sign);
+                    props.push(shop, roof, counter, sign);
 
-                    // Materials for Chocolate and Green Money
+                    // Decorative Jars on shelves inside shop
+                    const jarMat = new THREE.MeshStandardMaterial({ color: 0xffeeaa, transparent: true, opacity: 0.8 });
+                    for (let j = -4; j <= 4; j += 2) {
+                        const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.8), jarMat);
+                        jar.position.set(j, 2.2, 0.2);
+                        scene.add(jar);
+                        props.push(jar);
+                    }
+
                     const chocMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.3 });
                     const moneyMat = new THREE.MeshStandardMaterial({ color: 0x2b9348, roughness: 0.5 });
 
-                    // Mohamed (Left Seller)
                     const mohamed = createRobloxR6(0x2a9d8f, 0x264653);
-                    mohamed.position.set(-2.5, 0, -1);
+                    mohamed.position.set(-2.8, 0, -1);
                     scene.add(mohamed);
+                    props.push(mohamed);
 
                     const choc1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.8), chocMat);
                     choc1.position.set(0, -1.8, 0.5);
                     mohamed.rig.rightArmGroup.add(choc1);
 
-                    // Alizar (Right Seller)
                     const alizar = createRobloxR6(0xf4a261, 0x6b705c);
-                    alizar.position.set(2.5, 0, -1);
+                    alizar.position.set(2.8, 0, -1);
                     scene.add(alizar);
+                    props.push(alizar);
 
                     const choc2 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.8), chocMat);
                     choc2.position.set(0, -1.8, 0.5);
                     alizar.rig.rightArmGroup.add(choc2);
 
-                    // Customers trading
                     const customerLeft = createRobloxR6(0xee9b00, 0x005f73);
-                    customerLeft.position.set(-2.5, 0, 2);
+                    customerLeft.position.set(-2.8, 0, 2);
                     customerLeft.rotation.y = Math.PI;
 
                     const money1 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.35), moneyMat);
@@ -685,7 +856,7 @@
                     customerLeft.rig.rightArmGroup.add(money1);
 
                     const customerRight = createRobloxR6(0xca6702, 0x0a9396);
-                    customerRight.position.set(2.5, 0, 2);
+                    customerRight.position.set(2.8, 0, 2);
                     customerRight.rotation.y = Math.PI;
 
                     const money2 = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.35), moneyMat);
@@ -693,20 +864,19 @@
                     customerRight.rig.rightArmGroup.add(money2);
 
                     scene.add(customerLeft, customerRight);
+                    props.push(customerLeft, customerRight);
 
                     let tradeTimer = 0;
 
                     return {
-                        actors: [shop, roof, counter, sign, mohamed, alizar, customerLeft, customerRight],
+                        actors: props,
                         update: () => {
                             tradeTimer += 0.04;
                             const tradeAction = Math.sin(tradeTimer);
 
-                            // Mohamed & Alizar reaching forward with chocolate bars
                             mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 2.5 + tradeAction * 0.15;
                             alizar.rig.rightArmGroup.rotation.x = -Math.PI / 2.5 + tradeAction * 0.15;
 
-                            // Customers holding out green money rectangles
                             customerLeft.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 - tradeAction * 0.15;
                             customerRight.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 - tradeAction * 0.15;
                         }
@@ -715,11 +885,12 @@
             },
             {
                 title: "7. Corruption and Destruction",
-                desc: "Corrupt enforcers ignite the shop with fire torches, causing the wooden structure to char into dark ashes amidst rising flames.",
-                camPos: [0, 10, 24],
+                desc: "Corrupt enforcers burn down the shop. Dark embers, charred timber, heavy smoke, and dynamic fire light fill the scene.",
+                camPos: [0, 11, 25],
                 camLookAt: [0, 3, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0x1a1510);
+                    const props = [];
 
                     const shopMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.9 });
                     const shop = new THREE.Mesh(new THREE.BoxGeometry(11, 5.5, 6), shopMat);
@@ -730,11 +901,13 @@
                     roof.position.set(0, 7.25, -4);
                     roof.rotation.y = Math.PI / 4;
                     scene.add(shop, roof);
+                    props.push(shop, roof);
 
                     const corruptOfficial = createRobloxR6(0x111111, 0x000000);
                     corruptOfficial.position.set(6, 0, 1);
                     corruptOfficial.rotation.y = -Math.PI / 3;
                     scene.add(corruptOfficial);
+                    props.push(corruptOfficial);
 
                     const torch = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2), new THREE.MeshStandardMaterial({ color: 0x3d2314 }));
                     corruptOfficial.rig.rightArmGroup.add(torch);
@@ -743,22 +916,24 @@
                     const fireLight = new THREE.PointLight(0xff5500, 4, 35);
                     fireLight.position.set(0, 5, -4);
                     scene.add(fireLight);
+                    props.push(fireLight);
 
                     const fireParticles = [];
-                    const cols = [0xff1100, 0xff6600, 0xffcc00, 0x333333];
-                    for (let i = 0; i < 45; i++) {
+                    const cols = [0xff1100, 0xff6600, 0xffcc00, 0x222222];
+                    for (let i = 0; i < 50; i++) {
                         const p = new THREE.Mesh(
                             new THREE.BoxGeometry(0.5, 0.5, 0.5),
                             new THREE.MeshBasicMaterial({ color: cols[i % cols.length] })
                         );
-                        p.position.set((Math.random() - 0.5) * 10, Math.random() * 6, -4 + (Math.random() - 0.5) * 4);
+                        p.position.set((Math.random() - 0.5) * 11, Math.random() * 7, -4 + (Math.random() - 0.5) * 4);
                         scene.add(p);
                         fireParticles.push(p);
+                        props.push(p);
                     }
 
                     let burnTime = 0;
                     return {
-                        actors: [shop, roof, corruptOfficial, fireLight, ...fireParticles],
+                        actors: props,
                         update: () => {
                             burnTime += 0.008;
                             fireLight.intensity = 3 + Math.sin(burnTime * 30) * 1.8;
@@ -773,7 +948,7 @@
                                 p.scale.multiplyScalar(0.965);
                                 if (p.position.y > 9 || p.scale.x < 0.08) {
                                     p.position.y = 0.5;
-                                    p.position.x = (Math.random() - 0.5) * 10;
+                                    p.position.x = (Math.random() - 0.5) * 11;
                                     p.position.z = -4 + (Math.random() - 0.5) * 4;
                                     p.scale.set(1, 1, 1);
                                 }
@@ -784,26 +959,50 @@
             },
             {
                 title: "8. Becoming a Mirja",
-                desc: "Rising above hardship, Mohamed takes his place as a revered Mirja, leading his followers with wisdom, peace, and spiritual light.",
-                camPos: [0, 10, 26],
+                desc: "Mohamed stands on a white marble temple dais flanked by pillars, surrounded by glowing divine aura particles as his followers bow in respect.",
+                camPos: [0, 11, 28],
                 camLookAt: [0, 3, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0x52b788);
+                    const props = [];
+
+                    // Grand Temple Pillars
+                    const pillarMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.1 });
+                    for (let p = -10; p <= 10; p += 5) {
+                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 12, 16), pillarMat);
+                        pillar.position.set(p, 6, -6);
+                        scene.add(pillar);
+                        props.push(pillar);
+                    }
 
                     const podium = new THREE.Mesh(
-                        new THREE.CylinderGeometry(4.5, 5.5, 2.2, 12),
-                        new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.2 })
+                        new THREE.CylinderGeometry(5, 6, 2.2, 16),
+                        pillarMat
                     );
                     podium.position.set(0, 1.1, -2);
                     scene.add(podium);
+                    props.push(podium);
 
-                    const auraLight = new THREE.PointLight(0xffd700, 3, 20);
+                    const auraLight = new THREE.PointLight(0xffd700, 4, 25);
                     auraLight.position.set(0, 5, -2);
                     scene.add(auraLight);
+                    props.push(auraLight);
 
-                    const mohamed = createRobloxR6(0xffffff, 0xffffff, 0xf5cd2f);
+                    // Floating divine sparkle particles
+                    const sparkles = [];
+                    const sparkleMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+                    for (let sp = 0; sp < 30; sp++) {
+                        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), sparkleMat);
+                        spark.position.set((Math.random() - 0.5) * 12, Math.random() * 8, -2 + (Math.random() - 0.5) * 8);
+                        scene.add(spark);
+                        sparkles.push(spark);
+                        props.push(spark);
+                    }
+
+                    const mohamed = createRobloxR6(0xffffff, 0xffffff, 0xf5cd2f, 'crown');
                     mohamed.position.set(0, 2.2, -2);
                     scene.add(mohamed);
+                    props.push(mohamed);
 
                     const followers = [];
                     for (let i = -3; i <= 3; i++) {
@@ -813,16 +1012,23 @@
                         follower.rotation.y = Math.PI;
                         scene.add(follower);
                         followers.push(follower);
+                        props.push(follower);
                     }
 
                     let time = 0;
                     return {
-                        actors: [podium, auraLight, mohamed, ...followers],
+                        actors: props,
                         update: () => {
                             time += 0.02;
-                            auraLight.intensity = 2.5 + Math.sin(time * 3) * 1.2;
+                            auraLight.intensity = 3.0 + Math.sin(time * 3) * 1.5;
+
                             mohamed.rig.leftArmGroup.rotation.x = -Math.PI / 2.5;
                             mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 2.5;
+
+                            sparkles.forEach(sp => {
+                                sp.position.y += 0.03;
+                                if (sp.position.y > 9) sp.position.y = 1;
+                            });
 
                             followers.forEach((f, idx) => {
                                 f.rig.leftArmGroup.rotation.x = -Math.PI / 3 + Math.sin(time + idx) * 0.15;
@@ -844,7 +1050,7 @@
             }
             for (let i = scene.children.length - 1; i >= 0; i--) {
                 const child = scene.children[i];
-                if (child !== worldGround && child !== grid && child !== sun && child.type !== 'AmbientLight') {
+                if (child !== worldGround && child !== grid && child !== sun && child !== ambientLight) {
                     scene.remove(child);
                 }
             }
