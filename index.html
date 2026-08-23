@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Journey of Mohamed - Ultra-Detailed 3D Storyboard</title>
+    <title>The Journey of Mohamed - Interactive 3D Storyboard</title>
     <style>
         body, html {
             margin: 0;
@@ -27,54 +27,99 @@
 
         #story-ui {
             position: absolute;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 88%;
-            max-width: 950px;
-            background: rgba(10, 14, 22, 0.94);
-            backdrop-filter: blur(14px);
-            border: 2px solid rgba(0, 198, 255, 0.5);
-            border-radius: 12px;
-            padding: 20px 25px;
-            box-shadow: 0 10px 35px rgba(0,0,0,0.9);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: none;
+            box-sizing: border-box;
+            padding: 10px 22px 13px;
+            background: linear-gradient(
+                to bottom,
+                rgba(5, 8, 17, 0.02) 0%,
+                rgba(5, 8, 17, 0.34) 18%,
+                rgba(5, 8, 17, 0.78) 58%,
+                rgba(5, 8, 17, 0.93) 100%
+            );
+            backdrop-filter: blur(4px);
+            border: 0;
+            border-top: 1px solid rgba(255,255,255,0.10);
+            border-radius: 0;
+            box-shadow: 0 -8px 25px rgba(0,0,0,0.22);
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-areas:
+                "progress progress"
+                "info controls";
+            align-items: end;
+            column-gap: 18px;
+            row-gap: 5px;
             z-index: 10;
+            pointer-events: none;
+        }
+
+        .scene-info {
+            grid-area: info;
+            min-width: 0;
+            padding: 0 0 2px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+        }
+
+        #progress-bar-container {
+            grid-area: progress;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00c6ff, #ffcc00);
+            transition: width 0.1s linear;
         }
 
         #scene-title {
             margin: 0;
-            font-size: 22px;
+            font-size: 21px;
             color: #ffcc00;
             letter-spacing: 1px;
             text-shadow: 0 0 12px rgba(255, 204, 0, 0.5);
         }
 
         #scene-description {
-            margin: 0;
-            font-size: 15px;
-            line-height: 1.6;
-            color: #ddd;
-            min-height: 48px;
+            margin: 2px 0 0;
+            font-size: 14px;
+            line-height: 1.42;
+            color: rgba(245,245,245,0.92);
+            min-height: 0;
+            max-width: 1100px;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
         }
 
         .controls-row {
+            grid-area: controls;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
-            border-top: 1px solid rgba(255,255,255,0.15);
-            padding-top: 12px;
+            gap: 12px;
+            border-top: 0;
+            padding-top: 0;
+            pointer-events: auto;
         }
 
         .btn-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
 
         button {
-            padding: 10px 18px;
+            padding: 9px 16px;
             font-size: 14px;
             font-weight: bold;
             color: white;
@@ -94,9 +139,28 @@
 
         #scene-counter {
             font-family: monospace;
-            font-size: 14px;
+            font-size: 13px;
             color: #aaa;
         }
+        @media (max-width: 700px) {
+            #story-ui {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "progress"
+                    "info"
+                    "controls";
+                row-gap: 4px;
+            }
+
+            .controls-row {
+                justify-content: space-between;
+            }
+
+            #scene-description {
+                -webkit-line-clamp: 2;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -104,13 +168,19 @@
     <div id="canvas-container"></div>
 
     <div id="story-ui">
-        <h2 id="scene-title">Loading Ultra-Detailed World...</h2>
-        <p id="scene-description">Generating immersive 3D scene architecture and character models...</p>
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div class="scene-info">
+            <h2 id="scene-title">Loading World...</h2>
+            <p id="scene-description">Building scene...</p>
+        </div>
         <div class="controls-row">
             <span id="scene-counter">SCENE 1 / 8</span>
             <div class="btn-group">
                 <button onclick="prevScene()">◄ Prev</button>
                 <button id="autoplay-btn" onclick="toggleAutoPlay()">Autoplay: ON</button>
+                <button id="narrator-btn" onclick="toggleNarrator()">Narrator: ON</button>
                 <button onclick="nextScene()">Next ►</button>
             </div>
         </div>
@@ -119,9 +189,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
+        const SCENE_DURATION_MS = 16000;
+        // Each scene gets enough time for its title + caption to be narrated.
+        // Longer captions automatically receive more screen time; a small
+        // minimum keeps short scenes from feeling rushed.
+        function getSceneDurationMs(index) {
+            const data = storyData[index];
+            if (!data) return SCENE_DURATION_MS;
+            const words = `${data.title} ${data.desc}`.trim().split(/\s+/).length;
+            const byWords = 1500 + words * 440;
+            return Math.max(SCENE_DURATION_MS, Math.min(28000, byWords));
+        }
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x6ba4b8);
+        scene.background = new THREE.Color(0x5ca988);
+        scene.fog = new THREE.FogExp2(0x5ca988, 0.008);
 
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -131,32 +213,67 @@
         container.appendChild(renderer.domElement);
 
         const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-        sun.position.set(60, 100, 40);
+        sun.position.set(40, 80, 40);
         sun.castShadow = true;
         sun.shadow.mapSize.width = 2048;
         sun.shadow.mapSize.height = 2048;
-        sun.shadow.camera.near = 0.5;
-        sun.shadow.camera.far = 250;
-        sun.shadow.camera.left = -60;
-        sun.shadow.camera.right = 60;
-        sun.shadow.camera.top = 60;
-        sun.shadow.camera.bottom = -60;
         scene.add(sun);
 
-        const ambientLight = new THREE.AmbientLight(0x778899, 0.8);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
         scene.add(ambientLight);
 
         const worldGround = new THREE.Mesh(
-            new THREE.BoxGeometry(400, 2, 400),
-            new THREE.MeshStandardMaterial({ color: 0x3a5a40, roughness: 0.85 })
+            new THREE.BoxGeometry(500, 2, 500),
+            new THREE.MeshStandardMaterial({ color: 0x5ca988, roughness: 0.9 })
         );
         worldGround.position.y = -1;
         worldGround.receiveShadow = true;
         scene.add(worldGround);
 
-        // Modular Roblox R6 Character Builder
-        function createRobloxR6(shirtColor = 0x00a2ff, legColor = 0x111111, headColor = 0xf5cd2f, accessoryType = null) {
+        // Sign Texture Helper
+        function createSignTexture(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#e5a93b';
+            ctx.fillRect(0, 0, 512, 128);
+            ctx.strokeStyle = '#3d2314';
+            ctx.lineWidth = 12;
+            ctx.strokeRect(6, 6, 500, 116);
+            ctx.fillStyle = '#222';
+            ctx.font = '900 48px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 256, 64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // Exact Blocky R6 Character Model
+        function createRobloxR6(opts = {}, legacyLegColor, legacyHeadColor, legacyAccessoryType) {
+            // Preserve Index 10's object-style API while supporting the positional
+            // calls used by the transplanted Index 9 scenes.
+            if (typeof opts !== 'object' || opts === null) {
+                opts = {
+                    shirtColor: opts,
+                    legColor: legacyLegColor,
+                    headColor: legacyHeadColor,
+                    accessoryType: legacyAccessoryType
+                };
+            }
+            const {
+                shirtColor = 0x5bc0be,
+                legColor = 0x2b2d42,
+                headColor = 0xf5cd2f,
+                accessoryType = null,
+                isChild = false,
+                weapon = null
+            } = opts;
+
             const avatar = new THREE.Group();
+            const scaleFactor = isChild ? 0.7 : 1;
+            avatar.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
             const torsoMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.5 });
             const headMat = new THREE.MeshStandardMaterial({ color: headColor, roughness: 0.3 });
             const legMat = new THREE.MeshStandardMaterial({ color: legColor, roughness: 0.6 });
@@ -174,9 +291,9 @@
             head.castShadow = true;
             avatar.add(head);
 
-            // Face details
+            // Simple Face
             const eyeMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
-            const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.25, 0.05), eyeMat);
+            const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.22, 0.05), eyeMat);
             eyeL.position.set(-0.3, 4.7, 0.61);
             const eyeR = eyeL.clone();
             eyeR.position.x = 0.3;
@@ -185,19 +302,18 @@
             if (accessoryType === 'helmet') {
                 const helmet = new THREE.Mesh(new THREE.BoxGeometry(1.38, 0.65, 1.38), steelMat);
                 helmet.position.y = 5.15;
-                helmet.castShadow = true;
                 avatar.add(helmet);
             } else if (accessoryType === 'crown') {
                 const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.65, 0.55, 6), goldMat);
                 crown.position.y = 5.3;
-                crown.castShadow = true;
                 avatar.add(crown);
-            } else if (accessoryType === 'hood') {
-                const hood = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.3, 1.4), new THREE.MeshStandardMaterial({ color: shirtColor }));
-                hood.position.y = 4.65;
-                avatar.add(hood);
+            } else if (accessoryType === 'oooga_mask') {
+                const mask = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x8b4513 }));
+                mask.position.set(0, 4.6, 0.65);
+                avatar.add(mask);
             }
 
+            // Arms
             const leftArmGroup = new THREE.Group();
             leftArmGroup.position.set(-1.5, 4, 0);
             const leftArm = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), armMat);
@@ -212,26 +328,40 @@
             rightArm.position.y = -1;
             rightArm.castShadow = true;
             rightArmGroup.add(rightArm);
-
-            const swordGroup = new THREE.Group();
-            swordGroup.position.set(0, -1.8, 0.2);
-            swordGroup.rotation.x = Math.PI / 2.2;
-
-            const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.8), new THREE.MeshStandardMaterial({ color: 0x222222 }));
-            swordGroup.add(handle);
-
-            const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.12, 0.25), goldMat);
-            hilt.position.y = 0.4;
-            swordGroup.add(hilt);
-
-            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.8, 0.3), steelMat);
-            blade.position.y = 1.8;
-            swordGroup.add(blade);
-
-            swordGroup.visible = false;
-            rightArmGroup.add(swordGroup);
             avatar.add(rightArmGroup);
 
+            if (weapon === 'sword') {
+                const swordGroup = new THREE.Group();
+                swordGroup.position.set(0, -1.8, 0.2);
+                swordGroup.rotation.x = Math.PI / 2.2;
+                const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.8), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+                const hilt = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.12, 0.25), goldMat);
+                hilt.position.y = 0.4;
+                const blade = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.8, 0.3), steelMat);
+                blade.position.y = 1.8;
+                swordGroup.add(handle, hilt, blade);
+                rightArmGroup.add(swordGroup);
+            } else if (weapon === 'spear') {
+                const spearGroup = new THREE.Group();
+                const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 5), new THREE.MeshStandardMaterial({ color: 0x5c3d1e }));
+                const tip = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.8, 4), steelMat);
+                tip.position.y = 2.5;
+                spearGroup.add(shaft, tip);
+                spearGroup.position.set(0, -1, 0.5);
+                spearGroup.rotation.x = Math.PI / 3;
+                rightArmGroup.add(spearGroup);
+            } else if (weapon === 'torch') {
+                const torchGroup = new THREE.Group();
+                const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.5), new THREE.MeshStandardMaterial({ color: 0x3d2314 }));
+                const flame = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.4), new THREE.MeshBasicMaterial({ color: 0xff4500 }));
+                flame.position.y = 1.4;
+                torchGroup.add(handle, flame);
+                torchGroup.position.set(0, -1, 0.4);
+                torchGroup.rotation.x = Math.PI / 4;
+                rightArmGroup.add(torchGroup);
+            }
+
+            // Legs
             const leftLegGroup = new THREE.Group();
             leftLegGroup.position.set(-0.55, 2, 0);
             const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2, 1), legMat);
@@ -248,40 +378,73 @@
             rightLegGroup.add(rightLeg);
             avatar.add(rightLegGroup);
 
-            avatar.rig = { leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup, swordGroup };
+            avatar.rig = { leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup, torso, head };
             avatar.walkCycleTime = Math.random() * 10;
             return avatar;
         }
 
-        // Fallen Dead Soldiers Builder
-        function createFallenBody(shirtColor, legColor, headColor, arrowCount = 1) {
-            const body = createRobloxR6(shirtColor, legColor, headColor);
-            body.rotation.z = Math.PI / 2;
-            body.rotation.y = (Math.random() - 0.5) * Math.PI;
-            body.position.y = 0.55;
+        // Cacao Tree as shown in user screenshot
+        function createExactCacaoTree(x, z) {
+            const tree = new THREE.Group();
+            const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.2, 1.5, 12, 16),
+                new THREE.MeshStandardMaterial({ color: 0x5a3825, roughness: 0.9 })
+            );
+            trunk.position.y = 6;
+            trunk.castShadow = true;
 
-            body.rig.leftArmGroup.rotation.z = 1.2;
-            body.rig.rightArmGroup.rotation.x = -1.4;
-            body.rig.leftLegGroup.rotation.z = -0.4;
-            body.rig.rightLegGroup.rotation.x = 0.6;
+            const crown = new THREE.Mesh(
+                new THREE.SphereGeometry(6, 18, 18),
+                new THREE.MeshStandardMaterial({ color: 0x1d4d38, roughness: 0.8 })
+            );
+            crown.position.y = 12;
+            crown.castShadow = true;
 
-            const arrowMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            const featherMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+            tree.add(trunk, crown);
+            tree.position.set(x, 0, z);
+            return tree;
+        }
 
-            for (let a = 0; a < arrowCount; a++) {
-                const arrowGroup = new THREE.Group();
-                const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2), arrowMat);
-                const feather = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.05), featherMat);
-                feather.position.y = 1;
-                arrowGroup.add(shaft, feather);
+        function createCacaoCrate(x, z) {
+            const crateGroup = new THREE.Group();
+            const crate = new THREE.Mesh(
+                new THREE.BoxGeometry(1.8, 1.2, 1.8),
+                new THREE.MeshStandardMaterial({ color: 0x8b5a2b })
+            );
+            crate.position.y = 0.6;
+            crateGroup.add(crate);
 
-                arrowGroup.position.set((Math.random() - 0.5) * 1.2, 3.2, (Math.random() - 0.5) * 0.6);
-                arrowGroup.rotation.x = (Math.random() - 0.5) * 0.7;
-                arrowGroup.rotation.z = (Math.random() - 0.5) * 0.7;
-                body.add(arrowGroup);
+            for (let ox = -0.4; ox <= 0.4; ox += 0.8) {
+                for (let oz = -0.4; oz <= 0.4; oz += 0.8) {
+                    const pod = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.35, 8, 8),
+                        new THREE.MeshStandardMaterial({ color: 0x6e3619 })
+                    );
+                    pod.scale.set(0.6, 1.3, 0.6);
+                    pod.position.set(ox, 1.4, oz);
+                    crateGroup.add(pod);
+                }
             }
+            crateGroup.position.set(x, 0, z);
+            return crateGroup;
+        }
 
-            return body;
+        function createWoodenFence(x, z, length) {
+            const fence = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x6f4e37 });
+            for (let i = 0; i < length; i += 3) {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3, 0.4), mat);
+                post.position.set(i, 1.5, 0);
+                fence.add(post);
+            }
+            const rail1 = new THREE.Mesh(new THREE.BoxGeometry(length, 0.25, 0.2), mat);
+            rail1.position.set(length / 2 - 1.5, 2.2, 0);
+            const rail2 = rail1.clone();
+            rail2.position.y = 1.0;
+            fence.add(rail1, rail2);
+
+            fence.position.set(x, 0, z);
+            return fence;
         }
 
         function animateBotWalking(actor, targetX, targetZ, speed = 0.08) {
@@ -289,7 +452,7 @@
             const dz = targetZ - actor.position.z;
             const dist = Math.hypot(dx, dz);
 
-            if (dist > 0.4) {
+            if (dist > 0.3) {
                 actor.rotation.y = Math.atan2(dx, dz);
                 actor.position.x += (dx / dist) * speed;
                 actor.position.z += (dz / dist) * speed;
@@ -310,7 +473,125 @@
             }
         }
 
-        function createTorch(x, y, z) {
+        function createHorse({ bodyColor = 0x6f4e37, maneColor = 0x2b1b12 } = {}) {
+            const horse = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.85 });
+            const darkMat = new THREE.MeshStandardMaterial({ color: maneColor, roughness: 0.9 });
+            const saddleMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.75 });
+
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.5, 1.25), bodyMat);
+            body.position.y = 2.05;
+            body.castShadow = true;
+            horse.add(body);
+
+            const neck = new THREE.Mesh(new THREE.BoxGeometry(0.95, 2.3, 0.9), bodyMat);
+            neck.position.set(1.0, 3.25, 0);
+            neck.rotation.z = -0.28;
+            neck.castShadow = true;
+            horse.add(neck);
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.85, 0.78), bodyMat);
+            head.position.set(1.7, 4.0, 0);
+            head.rotation.z = -0.05;
+            horse.add(head);
+
+            const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 0.62), bodyMat);
+            muzzle.position.set(2.28, 3.85, 0);
+            horse.add(muzzle);
+
+            const earL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.55, 0.25), darkMat);
+            const earR = earL.clone();
+            earL.position.set(1.42, 4.45, -0.28);
+            earR.position.set(1.42, 4.45, 0.28);
+            horse.add(earL, earR);
+
+            const mane = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.85, 0.75), darkMat);
+            mane.position.set(0.45, 3.45, 0);
+            mane.rotation.z = -0.18;
+            horse.add(mane);
+
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 0.55), darkMat);
+            tail.position.set(-1.65, 2.8, 0);
+            tail.rotation.z = 0.65;
+            horse.add(tail);
+
+            const saddle = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.22, 1.35), saddleMat);
+            saddle.position.set(-0.15, 2.92, 0);
+            horse.add(saddle);
+
+            const legPositions = [[-0.95,-0.42],[-0.95,0.42],[0.95,-0.42],[0.95,0.42]];
+            const legs = [];
+            legPositions.forEach(([x,z])=>{
+                const leg = new THREE.Group();
+                const upper = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.45, 0.42), bodyMat);
+                upper.position.y = 1.05;
+                const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.28, 0.5), darkMat);
+                hoof.position.y = 0.25;
+                leg.add(upper, hoof);
+                leg.position.set(x,z===0?-0.42:0.42,z);
+                horse.add(leg);
+                legs.push(leg);
+            });
+            horse.userData.legs = legs;
+            horse.userData.head = head;
+            return horse;
+        }
+
+
+        function createMountedWarrior({bodyColor=0x6f4e37, shirtColor=0x2a9d8f, legColor=0x1d3557, headColor=0xf5cd2f, weapon="sword"} = {}) {
+            const horse = createHorse({bodyColor});
+            const rider = createRobloxR6({shirtColor, legColor, headColor, accessoryType:'helmet', weapon});
+            rider.scale.set(0.82,0.82,0.82);
+            rider.position.set(-0.2, 1.72, 0);
+            rider.rig.leftLegGroup.rotation.z = -0.38;
+            rider.rig.rightLegGroup.rotation.z = 0.38;
+            rider.rig.leftLegGroup.rotation.x = -0.18;
+            rider.rig.rightLegGroup.rotation.x = -0.18;
+            horse.add(rider);
+            horse.userData.rider = rider;
+            return {horse, rider};
+        }
+
+        function createArchitecturalCastle() {
+            const castle = new THREE.Group();
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x5a626e, roughness: 0.85 });
+            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b263e, roughness: 0.6 });
+
+            const frontWall = new THREE.Mesh(new THREE.BoxGeometry(36, 14, 4), stoneMat);
+            frontWall.position.set(0, 7, 0);
+            castle.add(frontWall);
+
+            [-18, 18].forEach(tx => {
+                const tower = new THREE.Mesh(new THREE.CylinderGeometry(4, 4.5, 20, 12), stoneMat);
+                tower.position.set(tx, 10, 0);
+                castle.add(tower);
+
+                const towerRoof = new THREE.Mesh(new THREE.ConeGeometry(5, 7, 12), roofMat);
+                towerRoof.position.set(tx, 23.5, 0);
+                castle.add(towerRoof);
+            });
+
+            return castle;
+        }
+
+        function createHummusBowl() {
+            const bowlGroup = new THREE.Group();
+            const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.35, 0.35, 12), new THREE.MeshStandardMaterial({ color: 0xd4a373 }));
+            const food = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.3, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0xe9c46a }));
+            food.position.y = 0.15;
+            bowlGroup.add(bowl, food);
+            return bowlGroup;
+        }
+
+        function createChocolateBar() {
+            return new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.15, 0.8), new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.4 }));
+        }
+
+        function createCashBill() {
+            return new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 0.4), new THREE.MeshBasicMaterial({ color: 0x2a9d8f }));
+        }
+
+function createTorch(x, y, z) {
             const torchGroup = new THREE.Group();
             torchGroup.position.set(x, y, z);
             const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 3.2), new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.9 }));
@@ -330,72 +611,218 @@
             return torchGroup;
         }
 
-        // Realistic Modular Castle Building (Fixes generic blocks and floating roofs!)
-        function createArchitecturalCastle() {
-            const castle = new THREE.Group();
-            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x5a626e, roughness: 0.85 });
-            const darkMat = new THREE.MeshStandardMaterial({ color: 0x2d3138, roughness: 0.9 });
-            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b263e, roughness: 0.6 });
-            const windowGlowMat = new THREE.MeshBasicMaterial({ color: 0x11151c });
 
-            // Main Fortress Front Wall
-            const frontWall = new THREE.Mesh(new THREE.BoxGeometry(32, 12, 3), stoneMat);
-            frontWall.position.set(0, 6, 0);
-            frontWall.castShadow = true;
-            frontWall.receiveShadow = true;
-            castle.add(frontWall);
+        // Extra scene dressing: decorative details added without replacing or removing
+        // the original scene objects, animations, or story beats.
+        function addSceneDetails(sceneId, props) {
+            const add = (obj) => { scene.add(obj); props.push(obj); return obj; };
+            const mat = (color, roughness = 0.8, metalness = 0) =>
+                new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
-            // Wall Battlements / Crenellations
-            for (let x = -15; x <= 15; x += 3) {
-                const cren = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2, 3.4), stoneMat);
-                cren.position.set(x, 13, 0);
-                cren.castShadow = true;
-                castle.add(cren);
-            }
-
-            // Two Robust Corner Towers with Conical Roofs
-            [-16, 16].forEach(tx => {
-                const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 18, 12), stoneMat);
-                tower.position.set(tx, 9, 0);
-                tower.castShadow = true;
-                castle.add(tower);
-
-                const towerRoof = new THREE.Mesh(new THREE.ConeGeometry(4.5, 6, 12), roofMat);
-                towerRoof.position.set(tx, 21, 0);
-                towerRoof.castShadow = true;
-                castle.add(towerRoof);
-
-                // Slit Windows on Towers
-                for (let wy = 6; wy <= 14; wy += 4) {
-                    const win = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.8, 0.2), windowGlowMat);
-                    win.position.set(tx, wy, 3.9);
-                    castle.add(win);
+            if (sceneId === 1) {
+                // Ground foliage + a few extra cacao pods and baskets.
+                for (let i = 0; i < 14; i++) {
+                    const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.45 + (i % 3) * 0.12, 8, 6), mat(0x40916c, 1));
+                    tuft.scale.set(1.3, 0.45, 1.0);
+                    tuft.position.set((i % 7) * 6 - 18, 0.35, (i % 2) * 7 + 5);
+                    add(tuft);
                 }
-            });
+                for (let i = 0; i < 6; i++) {
+                    const pod = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), mat(0x7f4f24, 0.75));
+                    pod.scale.set(0.7, 1.25, 0.7);
+                    pod.position.set(-16 + i * 6, 0.55, 9 - (i % 2) * 3);
+                    add(pod);
+                }
+            } else if (sceneId === 2) {
+                // Courtyard trim: pennants, serving bowls, and low stone edging.
+                const bannerMat = mat(0x457b9d, 0.6);
+                for (let x = -10; x <= 10; x += 5) {
+                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 5), mat(0x5c3d1e));
+                    pole.position.set(x, 2.5, 2.5);
+                    add(pole);
+                    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.8), bannerMat);
+                    flag.position.set(x + 0.55, 3.5, 2.5);
+                    flag.rotation.y = Math.PI;
+                    add(flag);
+                }
+                for (let i = -2; i <= 2; i++) {
+                    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.3, 0.22, 12), mat(0xd9b44a));
+                    bowl.position.set(i * 2.5, 0.15, 4.5);
+                    add(bowl);
+                }
+            } else if (sceneId === 3) {
+                // Battlefield dressing: scattered stones, broken shafts, and dust motes.
+                for (let i = 0; i < 12; i++) {
+                    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.45 + (i % 2) * 0.2), mat(0x6b6258));
+                    rock.position.set((i % 6) * 5.5 - 14, 0.35, 7 - (i % 3) * 4);
+                    add(rock);
+                }
+                for (let i = 0; i < 8; i++) {
+                    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.5), mat(0x5c3d1e));
+                    shaft.position.set(-15 + i * 4, 0.8, -9 + (i % 2) * 2);
+                    shaft.rotation.z = (i % 2 ? 0.5 : -0.4);
+                    add(shaft);
+                }
+                const dustMat = new THREE.MeshBasicMaterial({ color: 0xe4d8b4, transparent: true, opacity: 0.18 });
+                for (let i = 0; i < 18; i++) {
+                    const dust = new THREE.Mesh(new THREE.SphereGeometry(0.18, 6, 6), dustMat);
+                    dust.position.set((i % 9) * 4 - 16, 1 + (i % 4) * 0.9, -2 + (i % 3) * 5);
+                    add(dust);
+                }
+            } else if (sceneId === 4) {
+                // Coastal cliff dressing: sea foam, mooring rope, and scattered timber.
+                const foamMat = new THREE.MeshBasicMaterial({ color: 0xeafcff, transparent: true, opacity: 0.65 });
+                for (let i = 0; i < 12; i++) {
+                    const foam = new THREE.Mesh(new THREE.TorusGeometry(0.5 + (i % 3) * 0.25, 0.08, 6, 16), foamMat);
+                    foam.rotation.x = Math.PI / 2;
+                    foam.position.set(-12 + (i % 6) * 5, 0.22, 8 + (i % 2) * 3);
+                    add(foam);
+                }
+                for (let i = 0; i < 5; i++) {
+                    const timber = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.3, 0.45), mat(0x6f4e37));
+                    timber.position.set(-27 + i * 4, 0.5, 6 + (i % 2) * 2);
+                    timber.rotation.y = i * 0.35;
+                    add(timber);
+                }
+                const rope = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.12, 8, 18), mat(0x8d6e63));
+                rope.position.set(-9.5, 1.0, 4.5);
+                rope.rotation.x = Math.PI / 2;
+                add(rope);
+            } else if (sceneId === 5) {
+                // Ginga arrival details: desert plants, driftwood, and small tide markers.
+                for (let i = 0; i < 7; i++) {
+                    const cactus = new THREE.Group();
+                    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 2.5, 8), mat(0x588157));
+                    body.position.y = 1.25;
+                    cactus.add(body);
+                    if (i % 2 === 0) {
+                        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 8), mat(0x588157));
+                        arm.position.set(0.5, 1.2, 0);
+                        arm.rotation.z = Math.PI / 2.4;
+                        cactus.add(arm);
+                    }
+                    cactus.position.set(-14 + i * 4.5, 0, 4 + (i % 2) * 2);
+                    add(cactus);
+                }
+                const driftMat = mat(0x7f5539);
+                for (let i = 0; i < 5; i++) {
+                    const drift = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.35, 0.35), driftMat);
+                    drift.position.set(-12 + i * 5, 0.3, 7 - (i % 2) * 3);
+                    drift.rotation.z = (i - 2) * 0.12;
+                    add(drift);
+                }
+            } else if (sceneId === 6) {
+                // Snack plaza details: awning trim, stacked chocolate crates, and signage accents.
+                const trimMat = mat(0xffd166, 0.55);
+                for (let x = -7.5; x <= 7.5; x += 2.5) {
+                    const strip = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.25, 0.25), trimMat);
+                    strip.position.set(x, 7.8, -1.8);
+                    add(strip);
+                }
+                const chocMat2 = mat(0x3d2314, 0.35);
+                for (let i = 0; i < 9; i++) {
+                    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.18, 0.9), chocMat2);
+                    bar.position.set(-6 + (i % 5) * 3, 0.18, 6 + Math.floor(i / 5) * 1.2);
+                    add(bar);
+                }
+                const crateMat2 = mat(0x704214);
+                for (let i = 0; i < 3; i++) {
+                    const crate = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.0, 1.4), crateMat2);
+                    crate.position.set(-11 + i * 11, 0.5, 11);
+                    add(crate);
+                }
+            } else if (sceneId === 7) {
+                // Burning-shop dressing: roof smoke, rubble, and warning lanterns.
+                const smokeMat = new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0.18 });
+                for (let i = 0; i < 16; i++) {
+                    const smoke = new THREE.Mesh(new THREE.SphereGeometry(0.45 + (i % 3) * 0.2, 8, 8), smokeMat);
+                    smoke.position.set(-6 + (i % 8) * 1.7, 5 + (i % 4) * 1.0, -5 + (i % 3) * 1.5);
+                    add(smoke);
+                }
+                for (let i = 0; i < 8; i++) {
+                    const rubble = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + (i % 2) * 0.15), mat(0x3a2f2a));
+                    rubble.position.set(-7 + i * 2, 0.35, 2.8 + (i % 2));
+                    add(rubble);
+                }
+                for (const x of [-7, 7]) {
+                    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 10), new THREE.MeshBasicMaterial({ color: 0xff8c42 }));
+                    lamp.position.set(x, 2.5, -0.5);
+                    add(lamp);
+                }
+            } else if (sceneId === 8) {
+                // Legacy scene dressing: marble steps, planters, and gentle ground lights.
+                const stepMat = mat(0xe9ecef, 0.25);
+                for (let i = 0; i < 3; i++) {
+                    const step = new THREE.Mesh(new THREE.BoxGeometry(14 - i * 2, 0.45, 4 - i * 0.5), stepMat);
+                    step.position.set(0, 0.25 + i * 0.45, 5 - i * 0.6);
+                    add(step);
+                }
+                for (const x of [-10, 10]) {
+                    const planter = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.5, 0.8, 10), mat(0xc9c5ba));
+                    planter.position.set(x, 0.4, 6);
+                    add(planter);
+                    const plant = new THREE.Mesh(new THREE.SphereGeometry(1.1, 8, 8), mat(0x74c69d));
+                    plant.position.set(x, 1.35, 6);
+                    add(plant);
+                }
+                for (const x of [-13, 13]) {
+                    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffd166 }));
+                    orb.position.set(x, 2.2, 4);
+                    add(orb);
+                }
+            }
+        }
 
-            // Grand Archway Gate
-            const gateFrame = new THREE.Mesh(new THREE.BoxGeometry(6, 8, 3.4), darkMat);
-            gateFrame.position.set(0, 4, 0);
-            castle.add(gateFrame);
+        function createAlHumsFlag() {
+            const g = new THREE.Group();
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.06, 0.08, 5.5, 8),
+                new THREE.MeshStandardMaterial({ color: 0x5b4325, roughness: 0.9 })
+            );
+            pole.position.y = 2.75;
+            g.add(pole);
 
-            const archDoor = new THREE.Mesh(new THREE.BoxGeometry(4.8, 6.5, 3.6), new THREE.MeshStandardMaterial({ color: 0x3d2314 }));
-            archDoor.position.set(0, 3.25, 0);
-            castle.add(archDoor);
+            const makeTexture = (mirror = false) => {
+                const c = document.createElement('canvas');
+                c.width = 800; c.height = 360;
+                const ctx = c.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, c.width, c.height);
+                ctx.strokeStyle = '#9b9b9b';
+                ctx.lineWidth = 10;
+                ctx.strokeRect(5, 5, c.width - 10, c.height - 10);
+                if (mirror) { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+                ctx.fillStyle = '#080808';
+                ctx.font = '900 104px Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('AL-HUMS', c.width / 2, c.height / 2 + 4);
+                return new THREE.CanvasTexture(c);
+            };
 
-            return castle;
+            const geo = new THREE.PlaneGeometry(3.2, 1.44);
+            const front = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: makeTexture(false), roughness: 0.7, side: THREE.FrontSide }));
+            const back = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: makeTexture(true), roughness: 0.7, side: THREE.FrontSide }));
+            front.position.set(1.6, 4.45, 0);
+            back.position.set(1.6, 4.45, 0);
+            back.rotation.y = Math.PI;
+            g.add(front, back);
+            g.flag = front;
+            return g;
         }
 
         const storyData = [
             {
                 title: "1. A Childhood Amidst Cacao Fields",
-                desc: "Mohamed explores a lush, highly detailed cacao plantation packed with dense foliage, trees, wheelbarrows, fences, and working villagers, plucking a ripe cacao pod.",
+                desc: "Mohamed is captured by a Native American community and forced to work in the cacao forest. At eight years old, he is put to work harvesting ripe cacao pods, learning the land and the valuable crop that will shape his future.",
                 camPos: [-14, 12, 28],
                 camLookAt: [0, 4, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0x2d6a4f);
                     const props = [];
+                    addSceneDetails(1, props);
 
-                    const mohamed = createRobloxR6(0x2a9d8f, 0x264653, 0xe9c46a);
+                    const mohamed = createRobloxR6({ shirtColor: 0x90be6d, legColor: 0x6b3f1f, headColor: 0xf5cd2f, accessoryType: 'crown' });
                     mohamed.position.set(-18, 0, 6);
                     scene.add(mohamed);
                     props.push(mohamed);
@@ -492,33 +919,407 @@
                     };
                 }
             },
+                        {
+                title: "2. Harvesting the Cacao",
+                desc: "Mohamed carefully harvests a ripe cacao pod, carries it to the black cacao machine, and places it inside. After the machine works for several seconds, he retrieves the cacao, carries it to the baskets, and places it with the other harvested pods.",
+                camPos: [0, 10, 28], camLookAt: [-1, 3.5, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x3a7d44);
+                    scene.fog.color.setHex(0x3a7d44);
+                    const props = [];
+
+                    // Match the earlier, cleaner harvesting composition.
+                    const trees = [];
+                    for (let i = 0; i < 10; i++) {
+                        const t = createExactCacaoTree((i % 5) * 10 - 20, Math.floor(i / 5) * -13 - 5);
+                        scene.add(t); props.push(t); trees.push(t);
+                    }
+
+                    const crateA = createCacaoCrate(5, 2);
+                    const crateB = createCacaoCrate(7, 3.5);
+                    scene.add(crateA, crateB); props.push(crateA, crateB);
+
+                    const fence = createWoodenFence(-10, 5, 12);
+                    fence.rotation.y = Math.PI / 8;
+                    scene.add(fence); props.push(fence);
+
+                    // Simple open baskets, kept to the side so Mohamed never blocks the harvest.
+                    const basketMat = new THREE.MeshStandardMaterial({ color: 0x9b6a3c, roughness: 0.95 });
+                    const rimMat = new THREE.MeshStandardMaterial({ color: 0x704214, roughness: 0.95 });
+                    const basket = new THREE.Group();
+                    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.08, 0.78, 0.82, 14), basketMat);
+                    bowl.position.y = 0.41;
+                    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.93, 0.08, 8, 18), rimMat);
+                    rim.rotation.x = Math.PI / 2;
+                    rim.position.y = 0.82;
+                    basket.add(bowl, rim);
+                    basket.position.set(2.0, 0, 4.0);
+                    scene.add(basket); props.push(basket);
+
+                    const basketPods = [];
+                    for (let i = 0; i < 4; i++) {
+                        const bp = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), new THREE.MeshStandardMaterial({ color: 0x6e3b12 }));
+                        bp.scale.set(0.65, 1.2, 0.65);
+                        bp.position.set(1.45 + (i % 2) * 0.5, 0.95, 3.85 + Math.floor(i / 2) * 0.25);
+                        scene.add(bp); props.push(bp); basketPods.push(bp);
+                    }
+
+                    // The same black cauldron/cooking machine style that previously looked clean.
+                    const cauldron = new THREE.Mesh(
+                        new THREE.CylinderGeometry(1.8, 1.35, 2.2, 16),
+                        new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.3 })
+                    );
+                    cauldron.position.set(4.3, 1.1, 0.3);
+                    scene.add(cauldron); props.push(cauldron);
+
+                    const fire = new THREE.Group();
+                    const fireMat = new THREE.MeshBasicMaterial({ color: 0xff5a00 });
+                    const emberMat = new THREE.MeshBasicMaterial({ color: 0xffcc33 });
+                    for (let i = 0; i < 5; i++) {
+                        const f = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7 + (i % 2) * 0.2, 0.35), i % 2 ? emberMat : fireMat);
+                        f.position.set((i - 2) * 0.35, 0.35 + (i % 2) * 0.08, 0);
+                        fire.add(f);
+                    }
+                    fire.position.set(4.3, 0, 0.3);
+                    scene.add(fire); props.push(fire);
+
+                    // Put Mohamed to the side of the pod for a clear harvest silhouette.
+                    const mohamed = createRobloxR6({ shirtColor: 0x90be6d, legColor: 0x6b3f1f, headColor: 0xf5cd2f, accessoryType: 'crown', isChild: true });
+                    mohamed.position.set(-10, 0, 6);
+                    scene.add(mohamed); props.push(mohamed);
+
+                    const pod = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.72, 10, 10),
+                        new THREE.MeshStandardMaterial({ color: 0x6e3b12 })
+                    );
+                    pod.scale.set(0.6, 1.4, 0.6);
+                    pod.position.set(-3.0, 3.0, 1.7);
+                    scene.add(pod); props.push(pod);
+
+                    let t = 0, step = 0, timer = 0;
+                    return {
+                        actors: props,
+                        update: () => {
+                            t += 0.05;
+                            timer += 0.05;
+                            fire.children.forEach((f, i) => {
+                                f.scale.y = 0.8 + 0.25 * Math.sin(t * 8 + i);
+                                f.position.y = 0.32 + Math.abs(Math.sin(t * 5 + i)) * 0.15;
+                            });
+
+                            if (step === 0) {
+                                // Walk up and stop beside the pod, leaving it fully visible.
+                                const moving = animateBotWalking(mohamed, -4.9, 2.4, 0.065);
+                                if (!moving) { step = 1; timer = 0; }
+                            } else if (step === 1) {
+                                // Harvest: lean toward the pod while the pod remains visible in front of him.
+                                mohamed.rotation.y = Math.PI / 3.2;
+                                mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 1.45;
+                                mohamed.rig.rightArmGroup.rotation.z = -0.16;
+                                pod.position.set(-3.55, 2.8, 1.75);
+                                if (timer > 2.6) {
+                                    scene.remove(pod);
+                                    mohamed.rig.rightArmGroup.add(pod);
+                                    pod.position.set(0, -1.85, 0.55);
+                                    step = 2; timer = 0;
+                                }
+                            } else if (step === 2) {
+                                // Carry the harvested pod to the familiar black cooking machine.
+                                mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 1.25;
+                                mohamed.rig.rightArmGroup.rotation.z = -0.08;
+                                const moving = animateBotWalking(mohamed, 3.0, 0.8, 0.075);
+                                if (!moving) { step = 3; timer = 0; }
+                            } else if (step === 3) {
+                                // Put the cacao pod into the black machine and visibly work the mixture.
+                                mohamed.rotation.y = Math.PI / 2;
+                                mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 1.55;
+                                if (timer > 0.8) {
+                                    mohamed.rig.rightArmGroup.remove(pod);
+                                    scene.add(pod);
+                                    pod.position.set(4.3, 2.25, 0.3);
+                                    pod.scale.set(0.48, 0.95, 0.48);
+                                    step = 4; timer = 0;
+                                }
+                            } else if (step === 4) {
+                                // Cooking / processing movement: Mohamed works the machine for several seconds.
+                                mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 2.25 + Math.sin(t * 4.5) * 0.45;
+                                mohamed.rig.rightArmGroup.rotation.z = Math.sin(t * 3.5) * 0.18;
+                                mohamed.rig.leftArmGroup.rotation.x = -0.45 + Math.sin(t * 4.5 + 1.2) * 0.22;
+                                pod.position.y = 2.2 + Math.sin(t * 5) * 0.06;
+                                pod.rotation.y += 0.035;
+                                if (timer > 5.8) {
+                                    scene.remove(pod);
+                                    mohamed.rig.rightArmGroup.add(pod);
+                                    pod.scale.set(0.6, 1.4, 0.6);
+                                    pod.position.set(0, -1.85, 0.55);
+                                    step = 5; timer = 0;
+                                }
+                            } else if (step === 5) {
+                                // Carry the processed cacao from the machine to the collection basket.
+                                mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 1.25;
+                                mohamed.rig.rightArmGroup.rotation.z = -0.08;
+                                const moving = animateBotWalking(mohamed, 0.8, 4.0, 0.075);
+                                if (!moving) { step = 6; timer = 0; }
+                            } else if (step === 6) {
+                                // Place the cacao into the basket and hold the pose long enough to read clearly.
+                                mohamed.rotation.y = Math.PI;
+                                mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 1.55;
+                                if (timer > 1.0) {
+                                    mohamed.rig.rightArmGroup.remove(pod);
+                                    scene.add(pod);
+                                    pod.position.set(1.55, 1.05, 4.0);
+                                    pod.rotation.set(0, 0.5, 0);
+                                    basketPods.push(pod);
+                                    step = 7; timer = 0;
+                                }
+                            } else if (step === 7) {
+                                // Finish by returning to the black machine so the full harvest-to-processing story reads cleanly.
+                                const moving = animateBotWalking(mohamed, 3.0, 0.8, 0.065);
+                                if (!moving) { step = 8; timer = 0; }
+                            } else {
+                                mohamed.rig.rightArmGroup.rotation.x = -1.05 + Math.sin(t * 3.4) * 0.32;
+                                mohamed.rig.leftArmGroup.rotation.x = -0.45 + Math.sin(t * 3.4 + 1.1) * 0.14;
+                            }
+                        }
+                    };
+                }
+            },
             {
-                title: "2. Ascension to Leadership",
-                desc: "Mohamed hands out steaming bowls of stew in a vast castle courtyard filled with banners, glowing wall torches, tables, and a queuing line of grateful villagers.",
+                title: "3. Escape from the Cacao Forest",
+                desc: "After years of forced labor, Mohamed seizes a chance to escape the cacao forest. He breaks away from the plantation, follows a long road through the wilderness, and finally reaches Egypt, leaving the forest behind.",
+                camPos: [-2, 10, 30], camLookAt: [0, 4, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x7a9b4a);
+                    scene.fog.color.setHex(0xb7d58a);
+                    const props = [];
+
+                    // Forest behind him, open route leading toward Egypt.
+                    for (let i = 0; i < 9; i++) {
+                        const tree = createExactCacaoTree(-22 + (i % 5) * 10, -14 - Math.floor(i / 5) * 10);
+                        scene.add(tree); props.push(tree);
+                    }
+                    const road = new THREE.Mesh(
+                        new THREE.BoxGeometry(9, 0.2, 42),
+                        new THREE.MeshStandardMaterial({color: 0xb58d5a, roughness: 1})
+                    );
+                    road.position.set(0, 0.05, -1);
+                    scene.add(road); props.push(road);
+
+                    // Distant Egyptian pyramids mark the destination.
+                    [-13, 0, 13].forEach((x, i) => {
+                        const pyramid = new THREE.Mesh(
+                            new THREE.ConeGeometry(7 + i * 1.4, 13 + i * 2, 4),
+                            new THREE.MeshStandardMaterial({color: 0xd6b36a, roughness: 1})
+                        );
+                        pyramid.rotation.y = Math.PI / 4;
+                        pyramid.position.set(x, (13 + i * 2) / 2 - 1, -20);
+                        scene.add(pyramid); props.push(pyramid);
+                    });
+
+                    const mohamed = createRobloxR6({shirtColor: 0x90be6d, legColor: 0x6b3f1f, headColor: 0xf5cd2f, accessoryType: 'crown', isChild: true});
+                    mohamed.position.set(-15, 0, 13);
+                    scene.add(mohamed); props.push(mohamed);
+
+                    let t = 0;
+                    return {
+                        actors: props,
+                        update: () => {
+                            t += 0.05;
+                            const moving = animateBotWalking(mohamed, 0, -15, 0.075);
+                            mohamed.rig.leftArmGroup.rotation.x = Math.sin(t * 3) * 0.55;
+                            mohamed.rig.rightArmGroup.rotation.x = -Math.sin(t * 3) * 0.55;
+                            if (!moving) {
+                                mohamed.rig.leftArmGroup.rotation.x = -0.4;
+                                mohamed.rig.rightArmGroup.rotation.x = -0.4;
+                            }
+                        }
+                    };
+                }
+            },
+            {
+                title: "4. Mohamed Recruits the People of Egypt",
+                desc: "Egypt has grown into a vast civilization of stone buildings, courtyards, roads, and family tents. Mohamed walks through the busy settlement, visits four tents, and each family opens its tent and chooses to join him.",
+                camPos: [0, 11, 34], camLookAt: [0, 4, 2],
+                setup: () => {
+                    worldGround.material.color.setHex(0xc9a46a);
+                    scene.fog.color.setHex(0xe8d2a0);
+                    const props = [];
+
+                    // Large Egyptian civilization: walls, temples, streets, and market buildings.
+                    const stoneMat = new THREE.MeshStandardMaterial({ color: 0xc9b28a, roughness: 0.9 });
+                    const darkStone = new THREE.MeshStandardMaterial({ color: 0x8f7a5b, roughness: 1 });
+                    const marketMat = new THREE.MeshStandardMaterial({ color: 0xb47d4a, roughness: 0.9 });
+                    for (let x = -26; x <= 26; x += 13) {
+                        const block = new THREE.Mesh(new THREE.BoxGeometry(10, 7, 8), stoneMat);
+                        block.position.set(x, 3.5, -14 - (Math.abs(x) % 26) * 0.05);
+                        scene.add(block); props.push(block);
+                    }
+                    [-18, 18].forEach(x => {
+                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 11, 12), darkStone);
+                        pillar.position.set(x, 5.5, -5);
+                        scene.add(pillar); props.push(pillar);
+                    });
+                    const market = new THREE.Mesh(new THREE.BoxGeometry(34, 4, 8), marketMat);
+                    market.position.set(0, 2, -2);
+                    scene.add(market); props.push(market);
+
+                    const road = new THREE.Mesh(new THREE.BoxGeometry(11, 0.18, 48), new THREE.MeshStandardMaterial({ color: 0xa77b52, roughness: 1 }));
+                    road.position.set(0, 0.05, 7);
+                    scene.add(road); props.push(road);
+
+                    const mohamed = createRobloxR6({ shirtColor: 0x90be6d, legColor: 0x6b3f1f, headColor: 0xf5cd2f, accessoryType: 'crown' });
+                    mohamed.position.set(-10, 0, 11);
+                    scene.add(mohamed); props.push(mohamed);
+
+                    // Four family tents arranged through the settlement.
+                    const tents = [];
+                    const families = [];
+                    const tentXs = [-18, -6, 6, 18];
+                    tentXs.forEach((x, i) => {
+                        const tent = new THREE.Group();
+                        const canopy = new THREE.Mesh(new THREE.ConeGeometry(4.1, 6.2, 4), new THREE.MeshStandardMaterial({ color: [0xf4e1b6, 0xd7c28a, 0xe6cfa0, 0xc9b27a][i] }));
+                        canopy.rotation.y = Math.PI / 4;
+                        canopy.scale.set(1.15, 0.8, 1.15);
+                        canopy.position.y = 2.7;
+                        tent.add(canopy);
+                        const opening = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.1, 0.15), new THREE.MeshStandardMaterial({ color: 0x2b2118 }));
+                        opening.position.set(0, 1.55, 2.75);
+                        tent.add(opening);
+                        const flap = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.9, 0.08), new THREE.MeshStandardMaterial({ color: 0x6d5a43 }));
+                        flap.position.set(0, 1.55, 2.82);
+                        tent.add(flap);
+                        tent.position.set(x, 0, 5 + (i % 2) * 7);
+                        scene.add(tent); props.push(tent);
+                        tents.push({ tent, flap, opened: false });
+
+                        const family = createRobloxR6({ shirtColor: [0xe9c46a, 0x90be6d, 0xf4a261, 0x74c69d][i], legColor: 0x3d405b });
+                        family.position.set(x, 0, tent.position.z + 3.0);
+                        family.visible = false;
+                        scene.add(family); props.push(family); families.push(family);
+                    });
+
+                    let current = 0;
+                    let timer = 0;
+                    let marching = false;
+                    return {
+                        actors: props,
+                        update: () => {
+                            timer += 0.04;
+                            if (current < families.length) {
+                                const tent = tents[current];
+                                const family = families[current];
+                                const targetX = tent.tent.position.x;
+                                const targetZ = tent.tent.position.z + 3.0;
+                                const walking = animateBotWalking(mohamed, targetX, targetZ, 0.075);
+                                if (!walking && !tent.opened) {
+                                    tent.opened = true;
+                                    family.visible = true;
+                                    tent.flap.position.x = 1.1;
+                                    family.position.set(targetX, 0, targetZ + 1.0);
+                                    family.rotation.y = Math.PI;
+                                    timer = 0;
+                                } else if (tent.opened && !marching) {
+                                    const join = animateBotWalking(family, -2, 9 + current * 1.2, 0.055);
+                                    family.rotation.y = Math.PI;
+                                    if (!join && timer > 1.8) {
+                                        current++;
+                                        timer = 0;
+                                        if (current < families.length) {
+                                            marching = false;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (current >= families.length) {
+                                marching = true;
+                                animateBotWalking(mohamed, 0, 18, 0.06);
+                                families.forEach((family, i) => animateBotWalking(family, -4 + i * 2.6, 19 + i * 0.6, 0.05));
+                                mohamed.rig.rightArmGroup.rotation.x = -0.45 + Math.sin(timer * 2) * 0.12;
+                            }
+                        }
+                    };
+                }
+            },
+            {
+                title: "5. Leaving Egypt for a New Land",
+                desc: "With his followers gathered, Mohamed leads the growing group beyond Egypt's roads and monuments. They travel together toward a distant, empty land where a new community can begin.",
+                camPos: [0, 12, 36], camLookAt: [0, 4, 8],
+                setup: () => {
+                    worldGround.material.color.setHex(0xd9b77a);
+                    scene.fog.color.setHex(0xe9d5a7);
+                    const props = [];
+
+                    // Egypt behind them.
+                    [-18, 18].forEach(x => {
+                        const pyramid = new THREE.Mesh(new THREE.ConeGeometry(8, 16, 4), new THREE.MeshStandardMaterial({ color: 0xd6b36a, roughness: 1 }));
+                        pyramid.rotation.y = Math.PI / 4;
+                        pyramid.position.set(x, 7, -18);
+                        scene.add(pyramid); props.push(pyramid);
+                    });
+                    const cityWall = new THREE.Mesh(new THREE.BoxGeometry(44, 9, 3), new THREE.MeshStandardMaterial({ color: 0xc8b07f, roughness: 1 }));
+                    cityWall.position.set(0, 4.5, -10);
+                    scene.add(cityWall); props.push(cityWall);
+
+                    const road = new THREE.Mesh(new THREE.BoxGeometry(13, 0.18, 58), new THREE.MeshStandardMaterial({ color: 0xc49a62, roughness: 1 }));
+                    road.position.set(0, 0.05, 5);
+                    scene.add(road); props.push(road);
+
+                    // Empty land ahead.
+                    const destination = new THREE.Mesh(new THREE.BoxGeometry(54, 0.15, 24), new THREE.MeshStandardMaterial({ color: 0x94b86b, roughness: 1 }));
+                    destination.position.set(0, 0.08, 24);
+                    scene.add(destination); props.push(destination);
+
+                    const mohamed = createRobloxR6({ shirtColor: 0x90be6d, legColor: 0x6b3f1f, headColor: 0xf5cd2f, accessoryType: 'crown' });
+                    mohamed.position.set(-2, 0, -4);
+                    scene.add(mohamed); props.push(mohamed);
+                    const followers = [];
+                    const colors = [0xe9c46a, 0x74c69d, 0xf4a261, 0x90be6d, 0x457b9d, 0xd4a373];
+                    for (let i = 0; i < 10; i++) {
+                        const person = createRobloxR6({ shirtColor: colors[i % colors.length], legColor: 0x3d405b });
+                        person.position.set(-8 + (i % 5) * 4, 0, 1 + Math.floor(i / 5) * 4);
+                        scene.add(person); props.push(person); followers.push(person);
+                    }
+                    let t = 0;
+                    return {
+                        actors: props,
+                        update: () => {
+                            t += 0.05;
+                            animateBotWalking(mohamed, 0, 23, 0.06);
+                            followers.forEach((person, i) => {
+                                const targetX = -8 + (i % 5) * 4;
+                                const targetZ = 23 + Math.floor(i / 5) * 4;
+                                animateBotWalking(person, targetX, targetZ, 0.052);
+                            });
+                            mohamed.rig.rightArmGroup.rotation.x = -0.55 + Math.sin(t * 2) * 0.14;
+                        }
+                    };
+                }
+            },
+            {
+                title: "6. Ascension to Leadership",
+                desc: "Mohamed becomes a trusted leader of the Hums. Standing before his large tribal tent, he serves food to the people and earns their respect through wisdom, generosity, and care for the community.",
                 camPos: [0, 14, 28],
                 camLookAt: [0, 4, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0xd4a373);
                     const props = [];
+                    // Large tribal leadership tent behind Mohamed.
+                    const leadershipTent = new THREE.Group();
+                    const tentBodyMat = new THREE.MeshStandardMaterial({ color: 0x5b4636, roughness: 0.9 });
+                    const tentRoofMat = new THREE.MeshStandardMaterial({ color: 0x8b6b4d, roughness: 0.85 });
+                    const tentBody = new THREE.Mesh(new THREE.BoxGeometry(16, 5.5, 8), tentBodyMat);
+                    tentBody.position.y = 2.75;
+                    const tentRoof = new THREE.Mesh(new THREE.ConeGeometry(8.5, 4.5, 4), tentRoofMat);
+                    tentRoof.rotation.y = Math.PI / 4;
+                    tentRoof.position.y = 7.5;
+                    const tentDoor = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4.5, 0.3), new THREE.MeshStandardMaterial({ color: 0x241c16 }));
+                    tentDoor.position.set(0, 2.25, 4.05);
+                    leadershipTent.add(tentBody, tentRoof, tentDoor);
+                    leadershipTent.position.set(0, 0, -10);
+                    scene.add(leadershipTent);
+                    props.push(leadershipTent);
 
-                    // Detailed Castle Background Architecture
-                    const castleBack = createArchitecturalCastle();
-                    castleBack.position.set(0, 0, -12);
-                    scene.add(castleBack);
-                    props.push(castleBack);
-
-                    const bannerMat = new THREE.MeshStandardMaterial({ color: 0x00c6ff });
-                    for (let b = -12; b <= 12; b += 8) {
-                        const banner = new THREE.Mesh(new THREE.BoxGeometry(2, 7, 0.1), bannerMat);
-                        banner.position.set(b, 8, -10.3);
-                        scene.add(banner);
-                        props.push(banner);
-                    }
-
-                    const t1 = createTorch(-10, 0, -10);
-                    const t2 = createTorch(10, 0, -10);
-                    scene.add(t1, t2);
-                    props.push(t1, t2);
 
                     // Wooden Banquet Tables
                     const tableMat = new THREE.MeshStandardMaterial({ color: 0x5c3d1e });
@@ -545,7 +1346,7 @@
                         props.push(stm);
                     }
 
-                    const mohamed = createRobloxR6(0x2a9d8f, 0x1d3557, 0xf5cd2f, 'crown');
+                    const mohamed = createRobloxR6(0x90be6d, 0x6b3f1f, 0xf5cd2f, 'crown');
                     mohamed.position.set(-0.5, 0, 0);
                     scene.add(mohamed);
                     props.push(mohamed);
@@ -616,126 +1417,824 @@
                 }
             },
             {
-                title: "3. Full-Scale War for Hums",
-                desc: "An intense, chaotic battlefield filled with fallen bodies impaled by arrows, wooden spike barricades, clash sparks, smoke clouds, and clashing Red vs Blue armies.",
-                camPos: [0, 14, 30],
-                camLookAt: [0, 3, 0],
-                setup: () => {
-                    worldGround.material.color.setHex(0x5c4d3c);
-                    const props = [];
+                title: "7. Building the Castle of Al-Hums",
+                desc: "The people of Al-Hums build their great castle together. Workers carry stone, raise walls, and place blocks one by one as towers grow higher, while white AL-HUMS flags rise above the construction site.",
+                camPos:[0,14,32], camLookAt:[0,5,0],
+                setup:()=>{
+                    worldGround.material.color.setHex(0xd4a373);
+                    scene.fog.color.setHex(0xd4a373);
+                    const props=[];
+                    const stoneMat=new THREE.MeshStandardMaterial({color:0x777b83,roughness:0.88});
+                    const darkStone=new THREE.MeshStandardMaterial({color:0x555b63,roughness:0.92});
+                    const woodMat=new THREE.MeshStandardMaterial({color:0x6f4e37,roughness:0.9});
 
-                    // Battlefield Obstacles & Barricades
-                    const barricadeMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.9 });
-                    for (let b = -5; b <= 5; b += 2) {
-                        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.5, 4.5, 6), barricadeMat);
-                        spike.position.set(b * 3, 1.8, -4);
-                        spike.rotation.z = (Math.random() - 0.5) * 0.4;
-                        scene.add(spike);
-                        props.push(spike);
-                    }
+                    const foundation=new THREE.Mesh(new THREE.BoxGeometry(30,1.2,12),darkStone);
+                    foundation.position.set(0,0.6,-4); scene.add(foundation); props.push(foundation);
 
-                    // Scattered Broken Weapons & Arrows
-                    const arrowMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-                    for (let a = 0; a < 25; a++) {
-                        const arrow = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2), arrowMat);
-                        arrow.position.set((Math.random() - 0.5) * 30, 0.1, (Math.random() - 0.5) * 20);
-                        arrow.rotation.x = Math.PI / 2 + (Math.random() - 0.5);
-                        scene.add(arrow);
-                        props.push(arrow);
-                    }
+                    // Wall targets begin low so the viewer can see the structure being completed.
+                    const targetPositions=[];
+                    for(let i=0;i<10;i++) targetPositions.push([-13+i*2.9,1.8,-3]);
+                    for(let i=0;i<10;i++) targetPositions.push([-13+i*2.9,4.0,-3]);
+                    for(let i=0;i<8;i++) targetPositions.push([-10.15+i*2.9,6.2,-3]);
 
-                    // Fallen Dead Soldiers with Arrows Impaled
-                    const fallenList = [
-                        { shirt: 0xd90429, leg: 0x111111, pos: [-9, 0, 5], arrows: 2 },
-                        { shirt: 0x2a9d8f, leg: 0x1d3557, pos: [-5, 0, -6], arrows: 1 },
-                        { shirt: 0xd90429, leg: 0x2b2d42, pos: [7, 0, 7], arrows: 3 },
-                        { shirt: 0x2a9d8f, leg: 0x1d3557, pos: [10, 0, -3], arrows: 2 },
-                        { shirt: 0xd90429, leg: 0x111111, pos: [0, 0, 8], arrows: 2 },
-                        { shirt: 0x2a9d8f, leg: 0x1d3557, pos: [-12, 0, -2], arrows: 1 }
-                    ];
-
-                    fallenList.forEach(f => {
-                        const deadBody = createFallenBody(f.shirt, f.leg, 0xf5cd2f, f.arrows);
-                        deadBody.position.set(f.pos[0], deadBody.position.y, f.pos[2]);
-                        scene.add(deadBody);
-                        props.push(deadBody);
+                    const placedBlocks=[];
+                    targetPositions.forEach((p,idx)=>{
+                        const block=new THREE.Mesh(new THREE.BoxGeometry(2.7,2.0,2.0),stoneMat);
+                        block.position.set(p[0],p[1],p[2]);
+                        block.visible=false;
+                        scene.add(block); props.push(block); placedBlocks.push(block);
                     });
 
-                    // Active Combatants (Large army collision)
-                    const warriors = [];
-                    for (let row = -3; row <= 3; row++) {
-                        const blue = createRobloxR6(0x2a9d8f, 0x1d3557, 0xf5cd2f, 'helmet');
-                        blue.rig.swordGroup.visible = true;
-                        blue.position.set(-2.2, 0, row * 2.8);
-                        blue.rotation.y = Math.PI / 2;
-                        scene.add(blue);
+                    // Tower shells, which grow upward as more blocks are placed.
+                    const towerBases=[[-13,-5],[13,-5],[-13,4],[13,4]];
+                    const towers=[];
+                    towerBases.forEach((p)=>{
+                        const tower=new THREE.Group();
+                        const base=new THREE.Mesh(new THREE.CylinderGeometry(3.0,3.25,2.0,10),darkStone);
+                        base.position.y=1; tower.add(base);
+                        tower.position.set(p[0],0,p[1]);
+                        scene.add(tower); props.push(tower); towers.push(tower);
+                    });
 
-                        const red = createRobloxR6(0xd90429, 0x2b2d42, 0xf5cd2f, 'helmet');
-                        red.rig.swordGroup.visible = true;
-                        red.position.set(2.2, 0, row * 2.8);
-                        red.rotation.y = -Math.PI / 2;
-                        scene.add(red);
-
-                        warriors.push({ blue, red, idx: row });
-                        props.push(blue, red);
+                    // Scaffolding.
+                    for(let x=-12;x<=12;x+=4){
+                        const post=new THREE.Mesh(new THREE.BoxGeometry(0.25,10,0.25),woodMat); post.position.set(x,5,0.9); scene.add(post); props.push(post);
+                        const rail1=new THREE.Mesh(new THREE.BoxGeometry(4,0.2,0.2),woodMat); rail1.position.set(x+2,4,0.9); scene.add(rail1); props.push(rail1);
+                        const rail2=rail1.clone(); rail2.position.y=7; scene.add(rail2); props.push(rail2);
                     }
 
-                    // Sword Clash Sparks
-                    const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffff88 });
-                    const clashSparks = [];
-                    for (let c = -3; c <= 3; c++) {
-                        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), sparkMat);
-                        spark.position.set(0, 3.2, c * 2.8);
-                        scene.add(spark);
-                        clashSparks.push(spark);
-                        props.push(spark);
+                    // White flags reading AL-HUMS.
+                    const flags=[];
+                    [[-13,-5,0.8],[13,-5,-0.8],[-13,4,0.8],[13,4,-0.8]].forEach((p,idx)=>{
+                        const flag=createAlHumsFlag(); flag.position.set(p[0],7.5,p[1]); flag.rotation.y=p[2]; scene.add(flag); props.push(flag); flags.push(flag);
+                    });
+
+                    const workers=[];
+                    for(let i=0;i<8;i++){
+                        const w=createRobloxR6({shirtColor:i%2?0xe9c46a:0x74c69d,legColor:0x264653});
+                        w.position.set(-10+(i%4)*6,0,7+(Math.floor(i/4))*2.4);
+                        scene.add(w); props.push(w); workers.push(w);
                     }
 
-                    // Smoke Particles
-                    const smokeParticles = [];
-                    const smokeMat = new THREE.MeshBasicMaterial({ color: 0x333333, transparent: true, opacity: 0.5 });
-                    for (let s = 0; s < 30; s++) {
-                        const smk = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), smokeMat);
-                        smk.position.set((Math.random() - 0.5) * 35, Math.random() * 12, (Math.random() - 0.5) * 25);
-                        scene.add(smk);
-                        smokeParticles.push(smk);
-                        props.push(smk);
-                    }
+                    // A single lifting block visibly travels from the ground to the active wall row.
+                    const liftBlock=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.2,1.5),stoneMat);
+                    liftBlock.position.set(-17,0.7,7); scene.add(liftBlock); props.push(liftBlock);
 
-                    return {
-                        actors: props,
-                        update: () => {
-                            const time = Date.now() * 0.012;
+                    const mohamed=createRobloxR6({shirtColor:0x90be6d,legColor:0x6b3f1f,headColor:0xf5cd2f,accessoryType:'crown'});
+                    mohamed.position.set(0,0,11); scene.add(mohamed); props.push(mohamed);
 
-                            warriors.forEach((w, idx) => {
-                                const swing = Math.sin(time + idx * 1.5) * 0.7;
-                                
-                                w.blue.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 + swing;
-                                w.blue.rig.rightArmGroup.rotation.y = -Math.PI / 8;
+                    let t=0;
+                    let buildIndex=0;
+                    let buildTimer=0;
+                    let towerProgress=[0,0,0,0];
 
-                                w.red.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 - swing;
-                                w.red.rig.rightArmGroup.rotation.y = Math.PI / 8;
+                    return {actors:props,update:()=>{
+                        t+=0.05;
+                        buildTimer+=0.05;
 
-                                clashSparks[idx].visible = Math.abs(swing) < 0.25;
-                            });
+                        workers.forEach((w,i)=>{
+                            const tx=-9+(i%4)*6;
+                            const tz=2+(Math.floor(i/4))*1.5;
+                            animateBotWalking(w,tx,tz,0.035);
+                            w.rig.rightArmGroup.rotation.x=-0.8+Math.sin(t*3+i)*0.38;
+                            w.rig.leftArmGroup.rotation.x=0.25*Math.cos(t*2+i);
+                        });
 
-                            smokeParticles.forEach(p => {
-                                p.position.y += 0.08;
-                                if (p.position.y > 12) p.position.y = 1;
-                            });
+                        // Place one masonry block at a time so progress is unmistakable.
+                        if(buildIndex < placedBlocks.length && buildTimer > 0.75){
+                            const block=placedBlocks[buildIndex];
+                            const target=targetPositions[buildIndex];
+                            block.visible=true;
+                            block.position.set(target[0], target[1]+4.5, target[2]+1.5);
+                            block.userData.targetY=target[1];
+                            block.userData.falling=true;
+                            buildIndex++;
+                            buildTimer=0;
                         }
-                    };
+                        placedBlocks.forEach((block)=>{
+                            if(block.userData.falling){
+                                block.position.y -= 0.22;
+                                if(block.position.y <= block.userData.targetY){
+                                    block.position.y=block.userData.targetY;
+                                    block.userData.falling=false;
+                                }
+                            }
+                        });
+
+                        // Make each tower visibly gain height after the walls begin rising.
+                        towers.forEach((tower,i)=>{
+                            const desired=Math.min(5, Math.max(0, (buildIndex - 10 - i*3) * 0.9));
+                            const current=towerProgress[i];
+                            if(current<desired){
+                                towerProgress[i]+=0.03;
+                                const body=new THREE.Mesh(new THREE.CylinderGeometry(2.65,2.95,1.2,10),stoneMat);
+                                body.position.y=2+towerProgress[i]*1.1;
+                                tower.add(body);
+                                props.push(body);
+                            }
+                        });
+
+                        flags.forEach((f,i)=>{ f.flag.rotation.z=0.06*Math.sin(t*2+i*0.6); });
+                        mohamed.rig.rightArmGroup.rotation.x=-0.9+Math.sin(t*1.8)*0.22;
+                    }};
                 }
             },
             {
-                title: "4. Cast Adrift to Save Mohamed",
-                desc: "REALISTIC CASTLE FIX: Clean architectural castle walls and towers with zero clipping blocks! Red troops attack Blue defenders, as loyal companions push Mohamed in a wooden barrel off the cliff ledge.",
+                title: "8. The Castle of Al-Hums — The Arrival",
+                desc: "The castle of Al-Hums is complete. Mounted Al-Hums troops approach in formation, horses facing the entrance, and ride one after another through the great gate as the kingdom celebrates its new stronghold.",
+                camPos: [18, 8.5, 23], camLookAt: [0, 4.5, -4.5],
+                setup: () => {
+                    worldGround.material.color.setHex(0xb89567);
+                    scene.fog.color.setHex(0xf2dfb0);
+                    const props = [];
+
+                    const castle = createArchitecturalCastle();
+                    castle.position.set(0, 0, -8);
+                    scene.add(castle); props.push(castle);
+
+                    const gateFrame = new THREE.Mesh(new THREE.BoxGeometry(7.2, 9.5, 4.8), new THREE.MeshStandardMaterial({color:0x2d3138, roughness:0.9}));
+                    gateFrame.position.set(0,4.75,-5.65);
+                    scene.add(gateFrame); props.push(gateFrame);
+                    const gate = new THREE.Mesh(new THREE.BoxGeometry(5.2,7.6,0.8), new THREE.MeshStandardMaterial({color:0x121212, roughness:0.95}));
+                    gate.position.set(0,3.8,-3.1);
+                    scene.add(gate); props.push(gate);
+
+                    const entrancePath = new THREE.Mesh(new THREE.BoxGeometry(40,0.3,8), new THREE.MeshStandardMaterial({color:0x9a8669, roughness:1}));
+                    entrancePath.position.set(-8,0.15,-5.65);
+                    scene.add(entrancePath); props.push(entrancePath);
+
+                    const flags=[];
+                    [[-17,-8],[17,-8],[-10,-7],[10,-7]].forEach((p)=>{
+                        const f=createAlHumsFlag(); f.position.set(p[0],12.5,p[1]); scene.add(f); props.push(f); flags.push(f);
+                    });
+
+                    const riders=[];
+                    const horseColors=[0x6f4e37,0x4b3a2a,0x8b5a2b,0x5a3825];
+                    for(let i=0;i<4;i++){
+                        const mount=createMountedWarrior({bodyColor:horseColors[i],shirtColor:i%2?0xffffff:0x2a9d8f,legColor:0x1d3557,weapon:'spear'});
+                        const h=mount.horse, r=mount.rider;
+                        // Horse's head is +X locally. Rotate +90° so the head points along -Z, directly at the gate.
+                        h.rotation.y=Math.PI/2;
+                        h.position.set(0,0,14+i*4.2);
+                        // Rider is attached to the horse and seated low on the saddle.
+                        r.position.set(-0.2,1.15,0);
+                        r.rotation.y=Math.PI/2;
+                        r.scale.set(0.52,0.52,0.52);
+                        r.rig.leftLegGroup.rotation.z=-0.55; r.rig.rightLegGroup.rotation.z=0.55;
+                        r.rig.leftLegGroup.rotation.x=-0.32; r.rig.rightLegGroup.rotation.x=-0.32;
+                        r.rig.rightArmGroup.rotation.x=-0.7;
+                        const standard=createAlHumsFlag(); standard.scale.set(0.52,0.52,0.52); standard.position.set(0,1.1,-0.55); r.add(standard);
+                        scene.add(h); props.push(h); riders.push({h,r,flag:standard,delay:i*2.1,entered:false});
+                    }
+
+                    let t=0;
+                    return {actors:props, update:()=>{
+                        t+=0.045;
+                        flags.forEach((f,i)=>{f.flag.rotation.z=0.05*Math.sin(t*2+i*0.6);});
+                        riders.forEach((u)=>{
+                            const h=u.h,r=u.r;
+                            if(t<u.delay){ h.position.z=14; }
+                            else if(h.visible && !u.entered){
+                                h.position.z-=0.11;
+                                if(h.position.z<=-12.5) u.entered=true;
+                            }
+                            if(!u.entered){
+                                h.position.y=Math.sin(t*5+u.delay)*0.05;
+                                // legs alternate for a clear forward riding gait
+                                h.userData.legs.forEach((leg,j)=>{leg.rotation.x=Math.sin(t*10+u.delay+j*Math.PI)*0.42;});
+                                h.userData.head.rotation.z=-0.05+Math.sin(t*5+u.delay)*0.025;
+                            } else { h.visible=false; }
+                        });
+                    }};
+                }
+            },
+            {
+                title: "9. Training the Troops of Al-Hums",
+                desc: "Inside the castle yard, Al-Hums soldiers prepare for war: swordsmen practice measured blade clashes while archers draw, aim, and release arrows at distant targets. The training yard stays busy with disciplined drills and movement.",
+                camPos: [20, 10, 24], camLookAt: [0, 3.5, -3],
+                setup: () => {
+                    worldGround.material.color.setHex(0x8f7858); scene.fog.color.setHex(0xe7d4ad);
+                    const props=[];
+
+                    // Castle walls and central training yard.
+                    const castle=createArchitecturalCastle();
+                    castle.position.set(0,0,-12);
+                    scene.add(castle); props.push(castle);
+                    const yard=new THREE.Mesh(new THREE.BoxGeometry(34,0.25,28),new THREE.MeshStandardMaterial({color:0x9b805d,roughness:1}));
+                    yard.position.set(0,0.12,1);
+                    scene.add(yard); props.push(yard);
+
+                    // Training dummies / targets.
+                    const targetMat=new THREE.MeshStandardMaterial({color:0x6f4e37,roughness:0.9});
+                    const targetTopMat=new THREE.MeshStandardMaterial({color:0xd9c7a1,roughness:0.8});
+                    const targets=[];
+                    [-9,-3,3,9].forEach((x)=>{
+                        const post=new THREE.Mesh(new THREE.BoxGeometry(0.45,4.8,0.45),targetMat);
+                        post.position.set(x,2.4,-6);
+                        const ring=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,0.12,16),targetTopMat);
+                        ring.rotation.x=Math.PI/2; ring.position.set(x,3.0,-5.72);
+                        const center=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.14,16),new THREE.MeshStandardMaterial({color:0x8b263e}));
+                        center.rotation.x=Math.PI/2; center.position.set(x,3.0,-5.62);
+                        scene.add(post,ring,center); props.push(post,ring,center);
+                        targets.push(center);
+                    });
+
+                    // Two groups of sword trainees facing each other.
+                    const swordsA=[], swordsB=[], clashSparks=[];
+                    for(let i=0;i<3;i++){
+                        const a=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,accessoryType:'helmet',weapon:'sword'});
+                        const b=createRobloxR6({shirtColor:0x567568,legColor:0x1d3557,accessoryType:'helmet',weapon:'sword'});
+                        a.position.set(-8+i*3.6,0,3.5); a.rotation.y=Math.PI/2;
+                        b.position.set(-8+i*3.6,0,7.5); b.rotation.y=-Math.PI/2;
+                        scene.add(a,b); props.push(a,b); swordsA.push(a); swordsB.push(b);
+                    }
+
+                    // Archers positioned inside the yard. Their arrows visibly fly into the targets.
+                    const archers=[];
+                    const trainingShots=[];
+                    for(let i=0;i<4;i++){
+                        const ar=createRobloxR6({shirtColor:0x6c8f5a,legColor:0x3d2314,accessoryType:'helmet'});
+                        ar.position.set(-12+i*8,0,14); ar.rotation.y=Math.PI;
+                        const bow=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.08,8,16,Math.PI),new THREE.MeshStandardMaterial({color:0x6f4e37,roughness:0.9}));
+                        bow.rotation.z=Math.PI/2; bow.position.set(0,2.8,-0.55);
+                        ar.add(bow); ar.userData.trainingBow=bow;
+                        const shot=new THREE.Mesh(new THREE.BoxGeometry(0.07,2.8,0.07),new THREE.MeshStandardMaterial({color:0x2f241a}));
+                        shot.rotation.z=Math.PI/2; shot.visible=false;
+                        scene.add(shot); props.push(shot);
+                        ar.userData.trainingShot=shot; ar.userData.lastShot=-10;
+                        scene.add(ar); props.push(ar); archers.push(ar);
+                        trainingShots.push({mesh:shot,archer:ar,target:targets[i],startX:ar.position.x,startY:2.8,startZ:13.1,targetX:targets[i].position.x,targetY:3.0,targetZ:targets[i].position.z});
+                    }
+
+                    let t=0;
+                    return {actors:props, update:()=>{
+                        t+=0.045;
+                        // Sword practice: paired attacks, blocks, recoil and resets.
+                        swordsA.forEach((a,i)=>{
+                            const b=swordsB[i];
+                            const phase=(t*1.8+i*0.75)%Math.PI;
+                            const strike=Math.sin(phase*2);
+                            a.rig.rightArmGroup.rotation.x=-0.8-0.95*Math.max(0,strike);
+                            b.rig.rightArmGroup.rotation.x=-0.8+0.95*Math.max(0,-strike);
+                            a.rig.leftArmGroup.rotation.x=0.25*Math.max(0,-strike);
+                            b.rig.leftArmGroup.rotation.x=0.25*Math.max(0,strike);
+                            a.position.z=3.5+0.25*Math.sin(t*1.8+i);
+                            b.position.z=7.5-0.25*Math.sin(t*1.8+i);
+                            a.rotation.y=Math.PI/2; b.rotation.y=-Math.PI/2;
+                            if(Math.abs(strike)>0.88){
+                                if(!a.userData.lastSpark || t-a.userData.lastSpark>0.45){
+                                    const spark=new THREE.Mesh(new THREE.SphereGeometry(0.16,6,6),new THREE.MeshBasicMaterial({color:0xffd166}));
+                                    spark.position.set((a.position.x+b.position.x)/2,3.5,(a.position.z+b.position.z)/2);
+                                    scene.add(spark); props.push(spark); clashSparks.push({mesh:spark,t:t});
+                                    a.userData.lastSpark=t;
+                                }
+                            }
+                        });
+                        clashSparks.splice(0).forEach((sp)=>{ if(t-sp.t>0.22){scene.remove(sp.mesh);} else {clashSparks.push(sp);} });
+
+                        // Archers draw, aim, release, then reset for another shot.
+                        archers.forEach((ar,i)=>{
+                            const cycle=(t+i*0.7)%4.5;
+                            const draw=cycle<2.1;
+                            ar.rig.rightArmGroup.rotation.x=draw ? -1.0-0.25*Math.sin(cycle*2.5) : -0.35;
+                            ar.rig.leftArmGroup.rotation.x=draw ? -0.7 : -0.2;
+                            ar.userData.trainingBow.rotation.z=Math.PI/2 + (draw?0.35:0);
+                            if(cycle>2.1 && cycle<2.18 && t-ar.userData.lastShot>3.8){
+                                ar.userData.lastShot=t;
+                                const shot=trainingShots[i];
+                                shot.mesh.visible=true;
+                                shot.flightStart=t;
+                            }
+                        });
+                        trainingShots.forEach((shot,i)=>{
+                            if(shot.flightStart===undefined || !shot.mesh.visible) return;
+                            const q=Math.min(1,(t-shot.flightStart)/0.8);
+                            const ease=q*q*(3-2*q);
+                            shot.mesh.position.set(
+                                shot.startX+(shot.targetX-shot.startX)*ease,
+                                shot.startY+(shot.targetY-shot.startY)*ease,
+                                shot.startZ+(shot.targetZ-shot.startZ)*ease
+                            );
+                            if(q>=1){
+                                shot.mesh.visible=false;
+                                shot.target.scale.set(1.12,1.12,1.12);
+                                shot.target.userData.hitUntil=t+0.25;
+                            }
+                        });
+                        targets.forEach(target=>{
+                            if(target.userData.hitUntil && t<target.userData.hitUntil){
+                                target.rotation.z += 0.08;
+                            }
+                        });
+                    }};
+                }
+            },
+            {
+                title: "10. The Arrow Storm",
+                desc: "Egypt and Mesopotamia have formed an alliance against Al-Hums. The battle begins with mounted scouts moving across the flanks and archers firing volleys from behind the lines. Arrows cross the field as soldiers are struck and fall while the advancing armies press forward.",
+                camPos: [0, 12.5, 34], camLookAt: [0, 3.0, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x5b4d3d); scene.fog.color.setHex(0x5b4d3d);
+                    const props=[], blue=[], red=[], archers=[], cavalry=[], arrows=[], fallen=[], dust=[], sparks=[];
+                    const lanes=[-8,-5,-2,1,4,7];
+
+                    // Terrain, smoke and distant battle standards.
+                    for(let i=0;i<30;i++){
+                        const d=new THREE.Mesh(new THREE.SphereGeometry(0.28,6,6),new THREE.MeshBasicMaterial({color:0x9f8668,transparent:true,opacity:0.12}));
+                        d.position.set((Math.random()-0.5)*44,0.25+Math.random()*1.1,(Math.random()-0.5)*22);
+                        scene.add(d); props.push(d); dust.push(d);
+                    }
+                    [-12,12].forEach((x,i)=>{
+                        const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,5),new THREE.MeshStandardMaterial({color:0x4a2f1f}));
+                        pole.position.set(x,2.5,-9);
+                        scene.add(pole); props.push(pole);
+                        const flag=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.2),new THREE.MeshBasicMaterial({color:i?0x9e2a2b:0x2a9d8f,side:THREE.DoubleSide}));
+                        flag.position.set(x+(i?-1.3:1.3),4.0,-9); flag.rotation.y=i?Math.PI:0;
+                        scene.add(flag); props.push(flag);
+                    });
+
+                    const mohamed=createRobloxR6({shirtColor:0x90be6d,legColor:0x6b3f1f,headColor:0xf5cd2f,accessoryType:'crown',weapon:'sword'});
+                    mohamed.position.set(-15,0,0); scene.add(mohamed); props.push(mohamed); blue.push(mohamed);
+                    for(let i=0;i<8;i++){
+                        const s=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,accessoryType:'helmet',weapon:'sword'});
+                        s.position.set(-18-(i%2)*1.8,0,lanes[i%lanes.length]); scene.add(s); props.push(s); blue.push(s);
+                    }
+                    for(let i=0;i<9;i++){
+                        const s=createRobloxR6({shirtColor:0x9e2a2b,legColor:0x333333,accessoryType:'helmet',weapon:'spear'});
+                        s.position.set(18+(i%2)*1.8,0,lanes[i%lanes.length]); scene.add(s); props.push(s); red.push(s);
+                    }
+                    for(let i=0;i<4;i++){
+                        const a=createRobloxR6({shirtColor:0x6b1d1d,legColor:0x222222,accessoryType:'helmet'});
+                        a.position.set(21,0,-8+i*5.2); a.rotation.y=-Math.PI/2; a.userData.side='red';
+                        scene.add(a); props.push(a); archers.push(a);
+                        const b=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,accessoryType:'helmet'});
+                        b.position.set(-21,0,-8+i*5.2); b.rotation.y=Math.PI/2; b.userData.side='blue';
+                        scene.add(b); props.push(b); archers.push(b);
+                    }
+                    for(let i=0;i<2;i++){
+                        const m=createMountedWarrior({bodyColor:i?0x8b5a2b:0x5a3825,shirtColor:0x2a9d8f,legColor:0x1d3557,weapon:'sword'});
+                        m.horse.position.set(10+i*3.5,0,10+i*3.0); m.horse.rotation.y=Math.PI;
+                        scene.add(m.horse); props.push(m.horse); cavalry.push(m);
+                    }
+                    for(let i=0;i<72;i++){
+                        const g=new THREE.Group();
+                        const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,3.8),new THREE.MeshStandardMaterial({color:0x2b2118}));
+                        const tip=new THREE.Mesh(new THREE.ConeGeometry(0.11,0.34,5),new THREE.MeshStandardMaterial({color:0x8b8b8b,metalness:0.5}));
+                        tip.position.y=1.98; g.add(shaft,tip); g.visible=false; scene.add(g); props.push(g); arrows.push(g);
+                    }
+                    for(let i=0;i<14;i++){
+                        const sp=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.14,0.14),new THREE.MeshBasicMaterial({color:0xffd166}));
+                        sp.visible=false; scene.add(sp); props.push(sp); sparks.push(sp);
+                    }
+                    const fallenSpotsArrow = [
+                        [-15, -7], [-11, 6], [-6, -9], [1, 8], [8, -7], [15, 5]
+                    ];
+                    for(let i=0;i<6;i++){
+                        const b=createRobloxR6({shirtColor:i%2?0x9e2a2b:0x2a9d8f,legColor:0x242424,accessoryType:'helmet'});
+                        b.visible=false;
+                        b.position.set(fallenSpotsArrow[i][0],0.45,fallenSpotsArrow[i][1]);
+                        b.rotation.x=Math.PI/2;
+                        scene.add(b); props.push(b); fallen.push(b);
+                    }
+
+                    let t=0;
+                    const cavalryArcherTargets=archers.filter(a=>a.userData.side==='blue').slice(0,2); cavalryArcherTargets.forEach(a=>{a.userData.cavalryDead=false;a.userData.cavalryDeathTime=0;});
+                    const casualties=[blue[2],red[1],blue[5],red[4],blue[7],red[7]];
+                    casualties.forEach(u=>u.userData.dead=false);
+                    function markDead(u,when){ if(t>=when && !u.userData.dead){u.userData.dead=true;u.userData.deathTime=t;}}
+                    return {actors:props,update:()=>{
+                        t+=0.05;
+                        const infantryAdvance=Math.min(1,Math.max(0,(t-2.0)/8.0));
+                        blue.forEach((s,i)=>{
+                            if(s.userData.dead)return;
+                            const target=-8+(-2.0+((i%3)-1)*0.45)*infantryAdvance;
+                            animateBotWalking(s,target,s.position.z,0.07+0.025*infantryAdvance);
+                            s.rotation.y=Math.PI/2;
+                            s.rig.rightArmGroup.rotation.x=-0.35+Math.sin(t*3+i)*0.12;
+                        });
+                        red.forEach((s,i)=>{
+                            if(s.userData.dead)return;
+                            const target=8+(2.0+((i%3)-1)*0.45)*infantryAdvance;
+                            animateBotWalking(s,target,s.position.z,0.07+0.025*infantryAdvance);
+                            s.rotation.y=-Math.PI/2;
+                            s.rig.rightArmGroup.rotation.x=-0.35+Math.cos(t*3+i)*0.12;
+                        });
+                        archers.forEach((a,i)=>{
+                            const phase=(t+i*0.5)%4.5;
+                            a.rig.leftArmGroup.rotation.x=phase<1.5?-0.9:phase<2.3?0.3:-0.1;
+                            a.rig.rightArmGroup.rotation.x=phase<1.5?-0.95:phase<2.3?-0.15:-0.2;
+                        });
+                        arrows.forEach((ar,i)=>{
+                            const perSide=Math.floor(i/9);
+                            const local=i%9;
+                            const sideBlock=Math.floor(i/36);
+                            const volley=perSide%4;
+                            const start=1.8+volley*2.5+local*0.08+(sideBlock?0.9:0);
+                            const flight=t-start;
+                            if(flight>0 && flight<2.7){
+                                const q=flight/2.7;
+                                ar.visible=true;
+                                const fromLeft=(i>=36);
+                                const startX=fromLeft?-19:19, endX=fromLeft?19:-19;
+                                ar.position.set(startX+(endX-startX)*q,7.5-q*6.4,lanes[local%lanes.length]+Math.sin(q*Math.PI)*0.7);
+                                ar.rotation.z=fromLeft?Math.PI/2:-Math.PI/2;
+                            }else ar.visible=false;
+                        });
+                        cavalry.forEach((u,i)=>{
+                            const h=u.horse,r=u.rider;
+                            h.userData.legs.forEach((leg,j)=>leg.rotation.x=Math.sin(t*9+i+j)*0.42*(j%2?-1:1));
+                            const x=10-i*0.8-((t>2.2)?Math.min(10,(t-2.2)*1.2):0);
+                            h.position.x=x; h.position.z=10+i*3; h.rotation.y=Math.PI;
+                            r.rotation.y=0;
+                        });
+                        // Cavalry reaches the opposing archers and takes out only a few of them.
+                        cavalry.forEach((u,i)=>{
+                            const h=u.horse,r=u.rider;
+                            const flankZ=9+i*3;
+                            if(t>2.5){ h.position.x=Math.max(-22,13-i*3.5-(t-2.5)*2.3); h.position.z=flankZ; h.rotation.y=Math.PI; }
+                            if(t>8.0+i*0.55){
+                                const target=cavalryArcherTargets[i];
+                                if(target && !target.userData.cavalryDead && Math.abs(h.position.x-target.position.x)<3.2 && Math.abs(h.position.z-target.position.z)<4.5){
+                                    target.userData.cavalryDead=true; target.userData.cavalryDeathTime=t;
+                                    r.rig.rightArmGroup.rotation.x=-1.2;
+                                }
+                            }
+                        });
+                        cavalryArcherTargets.forEach((a,i)=>{
+                            if(!a.userData.cavalryDead)return;
+                            const d=t-a.userData.cavalryDeathTime; a.rotation.z=(i%2?-1:1)*Math.min(1.4,d*2.8); a.position.y=Math.max(0.35,0.75-0.4*Math.min(1,d/0.8)); if(d>1)a.visible=false;
+                        });
+                        casualties.forEach((u,i)=>markDead(u,6.0+i*0.9));
+                        [...blue,...red].forEach((u,i)=>{
+                            if(!u.userData.dead)return;
+                            const d=t-u.userData.deathTime;
+                            u.rig.rightArmGroup.rotation.x=0.5;
+                            u.rotation.z=(i%2?1:-1)*Math.min(1.35,d*2.2);
+                            u.position.y=Math.max(0.45,0.75-0.3*Math.min(1,d/0.75));
+                        });
+                        fallen.forEach((b,i)=>{if(t>10+i*0.55)b.visible=true;});
+                        sparks.forEach((sp,i)=>{
+                            const active=t>6 && Math.sin(t*11+i*0.7)>0.96; sp.visible=active;
+                            if(active) sp.position.set(-0.5+(i%5)*0.35,1.6+Math.abs(Math.sin(t*12+i))*0.7,-6+(i%6)*2.4);
+                        });
+                        dust.forEach((d,i)=>{d.position.y=0.25+Math.abs(Math.sin(t*1.6+i))*0.6;});
+                    }};
+                }
+            },
+            {
+                title: "11. War Begins",
+                desc: "The allied Egyptian and Mesopotamian armies launch their main charge. Foot soldiers run forward with swords and spears while mounted warriors sweep in from the sides. The opposing lines finally meet, and the battlefield erupts into close combat.",
+                camPos: [0, 11.5, 31], camLookAt: [0, 3.0, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x625442); scene.fog.color.setHex(0x625442);
+                    const props=[], blue=[], red=[], mounted=[], deadBodies=[], sparks=[], dust=[];
+                    const lanes=[-7,-4,-1,2,5,8];
+                    for(let i=0;i<26;i++){
+                        const d=new THREE.Mesh(new THREE.SphereGeometry(0.24,6,6),new THREE.MeshBasicMaterial({color:0x9c8263,transparent:true,opacity:0.14}));
+                        d.position.set((Math.random()-0.5)*36,0.25+Math.random(),(Math.random()-0.5)*20); scene.add(d); props.push(d); dust.push(d);
+                    }
+                    const mohamed=createRobloxR6({shirtColor:0x90be6d,legColor:0x6b3f1f,headColor:0xf5cd2f,accessoryType:'crown',weapon:'sword'});
+                    mohamed.position.set(-13,0,-1); scene.add(mohamed); props.push(mohamed); blue.push(mohamed);
+                    for(let i=0;i<10;i++){
+                        const s=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,accessoryType:'helmet',weapon:'sword'});
+                        s.position.set(-17-(i%3)*1.8,0,lanes[i%lanes.length]); scene.add(s); props.push(s); blue.push(s);
+                    }
+                    for(let i=0;i<11;i++){
+                        const s=createRobloxR6({shirtColor:0x9e2a2b,legColor:0x333333,accessoryType:'helmet',weapon:'spear'});
+                        s.position.set(17+(i%3)*1.8,0,lanes[i%lanes.length]); scene.add(s); props.push(s); red.push(s);
+                    }
+                    const archers=[]; const arrows=[];
+                    for(let i=0;i<3;i++){
+                        const a=createRobloxR6({shirtColor:0x6b1d1d,legColor:0x222222,accessoryType:'helmet'});
+                        a.position.set(23,0,-8+i*7); a.rotation.y=-Math.PI/2; scene.add(a); props.push(a); archers.push({unit:a,side:'red',index:i});
+                        const b=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,accessoryType:'helmet'});
+                        b.position.set(-23,0,-8+i*7); b.rotation.y=Math.PI/2; scene.add(b); props.push(b); archers.push({unit:b,side:'blue',index:i});
+                    }
+                    for(let i=0;i<24;i++){
+                        const ar=new THREE.Mesh(new THREE.BoxGeometry(0.07,2.8,0.07),new THREE.MeshStandardMaterial({color:0x2f241a}));
+                        ar.rotation.z=i<12?-Math.PI/2:Math.PI/2; ar.visible=false; scene.add(ar); props.push(ar); arrows.push(ar);
+                    }
+                    for(let i=0;i<3;i++){
+                        const m=createMountedWarrior({bodyColor:i%2?0x8b5a2b:0x6f4e37,shirtColor:i%2?0xe9c46a:0x2a9d8f,legColor:i%2?0x333333:0x1d3557,weapon:i===1?'spear':'sword'});
+                        m.horse.position.set(i===0?-21:21,0,-9+i*8);
+                        m.horse.rotation.y=i===0?0:Math.PI;
+                        scene.add(m.horse); props.push(m.horse); mounted.push(m);
+                    }
+                    const deadSpotsWar = [
+                        [-17,-8],[-13,6],[-9,-10],[-5,8],[0,-7],[5,9],[10,-9],[15,6],[18,-3],[-1,4]
+                    ];
+                    for(let i=0;i<10;i++){
+                        const b=createRobloxR6({shirtColor:i%2?0x9e2a2b:0x2a9d8f,legColor:0x222222,accessoryType:'helmet'});
+                        b.position.set(deadSpotsWar[i][0],0.45,deadSpotsWar[i][1]); b.rotation.x=Math.PI/2; b.visible=false; scene.add(b); props.push(b); deadBodies.push(b);
+                    }
+                    for(let i=0;i<18;i++){
+                        const sp=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.12),new THREE.MeshBasicMaterial({color:0xffd166}));
+                        sp.visible=false; scene.add(sp); props.push(sp); sparks.push(sp);
+                    }
+                    let t=0;
+                    const cavalryArcherTargets=archers.filter(a=>a.side==='red').slice(0,2); cavalryArcherTargets.forEach(a=>{a.unit.userData.cavalryDead=false;a.unit.userData.cavalryDeathTime=0;});
+                    const casualtyQueue=[blue[3],red[2],blue[6],red[5],blue[9],red[8],blue[2],red[9]];
+                    casualtyQueue.forEach(u=>u.userData.dead=false);
+                    function kill(u,when){if(t>=when&&!u.userData.dead){u.userData.dead=true;u.userData.deathTime=t;}}
+                    return {actors:props,update:()=>{
+                        t+=0.05;
+                        const charge=Math.min(1,Math.max(0,(t-1.2)/5.5));
+                        blue.forEach((s,i)=>{
+                            if(s.userData.dead)return;
+                            const target=-3.0+((i%3)-1)*0.55*charge;
+                            animateBotWalking(s,target,s.position.z,0.09+0.025*charge);
+                            s.rotation.y=Math.PI/2;
+                            if(t>6){const beat=(t+i*0.4)%2.4; s.rig.rightArmGroup.rotation.x=beat<0.9?-1.05:beat<1.2?0.2:-0.35;}
+                        });
+                        red.forEach((s,i)=>{
+                            if(s.userData.dead)return;
+                            const target=3.0+((i%3)-1)*0.55*charge;
+                            animateBotWalking(s,target,s.position.z,0.09+0.025*charge);
+                            s.rotation.y=-Math.PI/2;
+                            if(t>6){const beat=(t+i*0.45+0.4)%2.6; s.rig.rightArmGroup.rotation.x=beat<1.0?-1.0:beat<1.25?0.2:-0.3;}
+                        });
+                        archers.forEach((a,i)=>{
+                            const phase=(t+a.index*0.4)%3.8;
+                            a.unit.rig.leftArmGroup.rotation.x=phase<1.3?-0.85:phase<1.9?0.25:-0.1;
+                            a.unit.rig.rightArmGroup.rotation.x=phase<1.3?-0.95:phase<1.9?-0.15:-0.2;
+                        });
+                        arrows.forEach((ar,i)=>{
+                            const volley=Math.floor(i/6); const side=i<12?'red':'blue'; const local=i%6;
+                            const start=4.5+volley*1.7+local*0.08; const flight=t-start;
+                            if(flight>0&&flight<2.1){ const q=flight/2.1; ar.visible=true; const fromLeft=side==='blue'; const sx=fromLeft?-21:21, ex=fromLeft?21:-21; ar.position.set(sx+(ex-sx)*q,6.8-q*4.8,-7+local*2.8); ar.rotation.z=fromLeft?Math.PI/2:-Math.PI/2; } else ar.visible=false;
+                        });
+                        mounted.forEach((u,i)=>{
+                            const h=u.horse,r=u.rider;
+                            h.userData.legs.forEach((leg,j)=>leg.rotation.x=Math.sin(t*10+i+j)*0.45*(j%2?-1:1));
+                            if(i===0){h.position.x=Math.min(-4,h.position.x+(t>1.8?0.055:0)); h.rotation.y=0;}
+                            else {h.position.x=Math.max(4,h.position.x-(t>1.8?0.055:0)); h.rotation.y=Math.PI;}
+                            r.rotation.y=i===0?0:Math.PI;
+                            const beat=(t+i)%2.8;
+                            if(beat<1.0) r.rig.rightArmGroup.rotation.x=-0.9; else r.rig.rightArmGroup.rotation.x=-0.25;
+                        });
+                        mounted.forEach((u,i)=>{
+                            const h=u.horse,r=u.rider;
+                            if(t>3.5){ const dir=i===0?1:-1; h.position.x += dir*0.16; h.rotation.y=dir>0?0:Math.PI; }
+                            if(t>9.0+i*0.45){
+                                const target=cavalryArcherTargets[i];
+                                if(target && !target.unit.userData.cavalryDead && Math.abs(h.position.x-target.unit.position.x)<3.2 && Math.abs(h.position.z-target.unit.position.z)<4.5){ target.unit.userData.cavalryDead=true; target.unit.userData.cavalryDeathTime=t; r.rig.rightArmGroup.rotation.x=-1.25; }
+                            }
+                        });
+                        cavalryArcherTargets.forEach((a,i)=>{ if(!a.unit.userData.cavalryDead)return; const d=t-a.unit.userData.cavalryDeathTime; a.unit.rotation.z=(i%2?-1:1)*Math.min(1.4,d*2.8); a.unit.position.y=Math.max(0.35,0.72-0.4*Math.min(1,d/0.8)); if(d>1)a.unit.visible=false; });
+                        casualtyQueue.forEach((u,i)=>kill(u,9.0+i*0.7));
+                        [...blue,...red].forEach((u,i)=>{
+                            if(!u.userData.dead)return;
+                            const d=t-u.userData.deathTime;
+                            if(d<0.75) u.rotation.z=(i%2?1:-1)*Math.min(1.4,d*2.1);
+                            else u.rotation.z=(i%2?1:-1)*1.4;
+                            u.position.y=Math.max(0.45,0.72-0.3*Math.min(1,d/0.75));
+                        });
+                        deadBodies.forEach((b,i)=>{if(t>11+i*0.35)b.visible=true;});
+                        sparks.forEach((sp,i)=>{
+                            const beat=(t*3.2+i*0.37)%2.2; const active=t>6.5&&beat<0.12; sp.visible=active;
+                            if(active){sp.position.set(-1.2+(i%6)*0.48,1.6+Math.abs(Math.sin(t*12+i))*0.75,-7+(i%5)*3.2); sp.rotation.set(t*6,t*7,t*8);}
+                        });
+                    }};
+                }
+            },
+            {
+                title: "12. Sword and Spear Clash",
+                desc: "The battle becomes a brutal close-range clash. Swords swing, spears thrust, shields block attacks, mounted warriors charge through gaps, and fighters stagger and fall as Al-Hums struggles to hold the line against the allied armies.",
+                camPos: [0, 10.5, 27], camLookAt: [0, 3.0, 0],
+                setup: () => {
+                    worldGround.material.color.setHex(0x4f453a); scene.fog.color.setHex(0x4f453a);
+                    const props=[], blue=[], red=[], mounted=[], fallen=[], sparks=[], debris=[];
+                    const lanes=[-6,-3,0,3,6];
+                    for(let i=0;i<22;i++){
+                        const d=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,6),new THREE.MeshBasicMaterial({color:0x725f4e,transparent:true,opacity:0.18}));
+                        d.position.set((Math.random()-0.5)*22,0.3+Math.random()*0.6,(Math.random()-0.5)*16); scene.add(d); props.push(d); debris.push(d);
+                    }
+                    const mohamed=createRobloxR6({shirtColor:0x90be6d,legColor:0x6b3f1f,headColor:0xf5cd2f,accessoryType:'crown',weapon:'sword'});
+                    mohamed.position.set(-5,0,0); scene.add(mohamed); props.push(mohamed); blue.push(mohamed);
+                    for(let i=0;i<7;i++){
+                        const s=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,accessoryType:'helmet',weapon:'sword'});
+                        s.position.set(-6+(i%2)*1.2,0,lanes[i%lanes.length]); scene.add(s); props.push(s); blue.push(s);
+                    }
+                    for(let i=0;i<7;i++){
+                        const s=createRobloxR6({shirtColor:0x9e2a2b,legColor:0x333333,accessoryType:'helmet',weapon:'spear'});
+                        s.position.set(6-(i%2)*1.2,0,lanes[i%lanes.length]); scene.add(s); props.push(s); red.push(s);
+                    }
+                    const archers=[]; const arrows=[];
+                    for(let i=0;i<3;i++){
+                        const a=createRobloxR6({shirtColor:0x6b1d1d,legColor:0x222222,accessoryType:'helmet'});
+                        a.position.set(20,0,-8+i*7); a.rotation.y=-Math.PI/2; scene.add(a); props.push(a); archers.push({unit:a,side:'red',index:i});
+                        const b=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,accessoryType:'helmet'});
+                        b.position.set(-20,0,-8+i*7); b.rotation.y=Math.PI/2; scene.add(b); props.push(b); archers.push({unit:b,side:'blue',index:i});
+                    }
+                    for(let i=0;i<24;i++){
+                        const ar=new THREE.Mesh(new THREE.BoxGeometry(0.07,2.8,0.07),new THREE.MeshStandardMaterial({color:0x2f241a}));
+                        ar.rotation.z=i<12?-Math.PI/2:Math.PI/2; ar.visible=false; scene.add(ar); props.push(ar); arrows.push(ar);
+                    }
+                    for(let i=0;i<3;i++){
+                        const m=createMountedWarrior({bodyColor:0x6f4e37,shirtColor:0xe9c46a,legColor:0x333333,weapon:i===1?'spear':'sword'});
+                        m.horse.position.set(i===0?-10:10,0,-7+i*7); m.horse.rotation.y=i===0?0:Math.PI;
+                        scene.add(m.horse); props.push(m.horse); mounted.push(m);
+                    }
+                    const fallenSpotsClash = [
+                        [-16,-8],[-13,2],[-10,8],[-6,-7],[-2,9],[3,-9],[7,7],[11,-5],[15,3],[-15,6],[5,-4],[16,-8]
+                    ];
+                    for(let i=0;i<12;i++){
+                        const b=createRobloxR6({shirtColor:i%2?0x9e2a2b:0x2a9d8f,legColor:0x222222,accessoryType:'helmet'});
+                        b.position.set(fallenSpotsClash[i][0],0.45,fallenSpotsClash[i][1]);
+                        b.rotation.x=Math.PI/2; b.visible=false; scene.add(b); props.push(b); fallen.push(b);
+                    }
+                    for(let i=0;i<28;i++){
+                        const sp=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.12),new THREE.MeshBasicMaterial({color:0xffd166}));
+                        sp.visible=false; scene.add(sp); props.push(sp); sparks.push(sp);
+                    }
+                    let t=0;
+                    const cavalryArcherTargets=archers.filter(a=>a.side==='red').slice(0,2); cavalryArcherTargets.forEach(a=>{a.unit.userData.cavalryDead=false;a.unit.userData.cavalryDeathTime=0;});
+                    const deathQueue=[red[1],blue[3],red[4],blue[5],red[6],blue[1],red[2],blue[6]];
+                    deathQueue.forEach(u=>u.userData.dead=false);
+                    function kill(u,when){if(t>=when&&!u.userData.dead){u.userData.dead=true;u.userData.deathTime=t;}}
+                    function faceEnemy(u,enemy){u.rotation.y=Math.atan2(enemy.position.x-u.position.x,enemy.position.z-u.position.z);}
+                    return {actors:props,update:()=>{
+                        t+=0.05;
+                        archers.forEach((a,i)=>{
+                            const phase=(t+a.index*0.45)%4.0;
+                            a.unit.rig.leftArmGroup.rotation.x=phase<1.3?-0.9:phase<1.9?0.25:-0.1;
+                            a.unit.rig.rightArmGroup.rotation.x=phase<1.3?-1.0:phase<1.9?-0.15:-0.2;
+                        });
+                        arrows.forEach((ar,i)=>{
+                            const volley=Math.floor(i/6); const side=i<12?'red':'blue'; const local=i%6;
+                            const start=2.0+volley*2.2+local*0.1; const flight=t-start;
+                            if(flight>0&&flight<1.9){ const q=flight/1.9; ar.visible=true; const fromLeft=side==='blue'; const sx=fromLeft?-18:18, ex=fromLeft?18:-18; ar.position.set(sx+(ex-sx)*q,6.4-q*4.5,-7+local*2.7); ar.rotation.z=fromLeft?Math.PI/2:-Math.PI/2; } else ar.visible=false;
+                        });
+                        blue.forEach((s,i)=>{
+                            if(s.userData.dead)return; const foe=red[i%red.length];
+                            if(t<2.2) animateBotWalking(s,-1.2+((i%3)-1)*0.3,s.position.z,0.05);
+                            else animateBotWalking(s,-0.55+((i%3)-1)*0.22,s.position.z,0.03);
+                            faceEnemy(s,foe);
+                            const beat=(t*2.8+i*0.55)%3.4;
+                            if(beat<0.8){s.rig.rightArmGroup.rotation.x=-1.1; s.rig.leftArmGroup.rotation.x=-0.25;}
+                            else if(beat<1.25){s.rig.rightArmGroup.rotation.x=0.3; s.rig.leftArmGroup.rotation.x=-0.75;}
+                            else{s.rig.rightArmGroup.rotation.x=-0.25; s.rig.leftArmGroup.rotation.x=-0.25;}
+                        });
+                        red.forEach((s,i)=>{
+                            if(s.userData.dead)return; const foe=blue[i%blue.length];
+                            if(t<2.2) animateBotWalking(s,1.2+((i%3)-1)*0.3,s.position.z,0.05);
+                            else animateBotWalking(s,0.55+((i%3)-1)*0.22,s.position.z,0.03);
+                            faceEnemy(s,foe);
+                            const beat=(t*3.0+i*0.6+0.5)%3.6;
+                            if(beat<0.9){s.rig.rightArmGroup.rotation.x=-1.0; s.rig.leftArmGroup.rotation.x=-0.2;}
+                            else if(beat<1.3){s.rig.rightArmGroup.rotation.x=0.25; s.rig.leftArmGroup.rotation.x=-0.7;}
+                            else{s.rig.rightArmGroup.rotation.x=-0.2; s.rig.leftArmGroup.rotation.x=-0.25;}
+                        });
+                        mounted.forEach((u,i)=>{
+                            const h=u.horse,r=u.rider; h.userData.legs.forEach((leg,j)=>leg.rotation.x=Math.sin(t*10+i+j)*0.44*(j%2?-1:1));
+                            const dir=i===0?1:-1; h.position.x += dir*0.045; h.rotation.y=dir>0?0:Math.PI;
+                            if((i%2===0)&&t>4) r.rig.rightArmGroup.rotation.x=-0.9+Math.sin(t*4+i)*0.2; else r.rig.rightArmGroup.rotation.x=-0.3;
+                            r.rotation.y=dir>0?0:Math.PI;
+                        });
+                        mounted.forEach((u,i)=>{
+                            const h=u.horse,r=u.rider; if(t>4.0){ const dir=i===0?1:-1; h.position.x += dir*0.12; h.rotation.y=dir>0?0:Math.PI; }
+                            if(t>7.5+i*0.5){ const target=cavalryArcherTargets[i]; if(target && !target.unit.userData.cavalryDead && Math.abs(h.position.x-target.unit.position.x)<3.2){ target.unit.userData.cavalryDead=true; target.unit.userData.cavalryDeathTime=t; r.rig.rightArmGroup.rotation.x=-1.2; } }
+                        });
+                        cavalryArcherTargets.forEach((a,i)=>{ if(!a.unit.userData.cavalryDead)return; const d=t-a.unit.userData.cavalryDeathTime; a.unit.rotation.z=(i%2?-1:1)*Math.min(1.4,d*2.8); a.unit.position.y=Math.max(0.35,0.72-0.4*Math.min(1,d/0.8)); if(d>1)a.unit.visible=false; });
+                        deathQueue.forEach((u,i)=>kill(u,5.8+i*0.95));
+                        [...blue,...red].forEach((u,i)=>{
+                            if(!u.userData.dead)return; const d=t-u.userData.deathTime;
+                            if(d<0.7){u.rotation.x=(i%3-1)*0.35*Math.min(1,d/0.7); u.rotation.z=(i%2?1:-1)*1.5*Math.min(1,d/0.7);}
+                            else{u.rotation.x=(i%3-1)*0.35;u.rotation.z=(i%2?1:-1)*1.5;}
+                            u.position.y=Math.max(0.45,0.72-0.32*Math.min(1,d/0.7));
+                        });
+                        fallen.forEach((b,i)=>{if(t>9+i*0.35)b.visible=true;});
+                        sparks.forEach((sp,i)=>{
+                            const beat=(t*4+i*0.43)%2.0; const active=t>2.8&&beat<0.11; sp.visible=active;
+                            if(active){sp.position.set(-0.75+(i%7)*0.25,1.8+Math.abs(Math.sin(t*14+i))*0.6,-6+(i%6)*2.4); sp.rotation.set(t*7,t*8,t*9);}
+                        });
+                    }};
+                }
+            },
+            {
+                title: "13. Victory of Al-Hums",
+                desc: "The allied armies are defeated, and Al-Hums stands victorious. Soldiers return beneath white AL-HUMS flags while Mohamed and his people celebrate the survival of their kingdom and the defense of their castle.",
+                camPos: [12, 10, 30], camLookAt: [0, 5, -6],
+                setup: () => {
+                    worldGround.material.color.setHex(0x6b7a4a);
+                    scene.fog.color.setHex(0x6b7a4a);
+                    const props=[];
+                    const castle=createArchitecturalCastle(); castle.position.set(0,0,-10); scene.add(castle); props.push(castle);
+                    const path=new THREE.Mesh(new THREE.BoxGeometry(22,0.25,24),new THREE.MeshStandardMaterial({color:0x9b8a66,roughness:1}));
+                    path.position.set(0,0.1,4); scene.add(path); props.push(path);
+                    const makeFlag=()=>{
+                        const g=new THREE.Group();
+                        const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,5),new THREE.MeshStandardMaterial({color:0x4a2f1f}));
+                        pole.position.y=2.5; g.add(pole);
+                        const c=document.createElement('canvas'); c.width=256; c.height=128; const x=c.getContext('2d');
+                        x.fillStyle='#f5f5f5'; x.fillRect(0,0,256,128); x.fillStyle='#111'; x.font='bold 34px Arial'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('AL-HUMS',128,66);
+                        const f=new THREE.Mesh(new THREE.PlaneGeometry(2.8,1.4),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.DoubleSide}));
+                        f.position.set(1.4,4.15,0); g.add(f); g.flag=f; return g;
+                    };
+                    [-9,-3,3,9].forEach(x=>{const f=makeFlag(); f.position.set(x,0,-2); scene.add(f); props.push(f);});
+                    const mohamed=createRobloxR6({shirtColor:0xffffff,legColor:0x1d3557,accessoryType:'crown'});
+                    mohamed.position.set(0,0,2); scene.add(mohamed); props.push(mohamed);
+                    const troops=[];
+                    for(let i=0;i<6;i++){
+                        const u=createMountedWarrior({bodyColor:i%2?0x6f4e37:0x4b3a2a,shirtColor:0x2a9d8f,legColor:0x1d3557,weapon:'sword'});
+                        u.horse.position.set(-7.5+i*3,0,14+i*0.7); u.horse.rotation.y=Math.PI; scene.add(u.horse); props.push(u.horse); troops.push(u);
+                    }
+                    let t=0;
+                    return {actors:props,update:()=>{
+                        t+=0.05;
+                        troops.forEach((u,i)=>{ const h=u.horse,r=u.rider; h.position.z=Math.max(3.5,14-(t-i*0.35)*0.55); h.rotation.y=Math.PI; r.rotation.y=Math.PI;
+                            h.userData.legs.forEach((leg,j)=>leg.rotation.x=Math.sin(t*9+i+j)*0.35*(j%2?-1:1));
+                        });
+                        mohamed.rig.leftArmGroup.rotation.x=-1.0+Math.sin(t*2)*0.12; mohamed.rig.rightArmGroup.rotation.x=-1.0+Math.sin(t*2)*0.12;
+                    }};
+                }
+            },
+            {
+                title: "14. The British Raid on Al-Hums",
+                desc: "Britain, allied with Egypt and Mesopotamia, launches a raid on Al-Hums. British troops place ladders against the castle walls, climb toward the battlements, defeat the remaining defenders, and raise their own flag after taking the heights.",
+                camPos: [16, 11.5, 25], camLookAt: [0, 8, -7],
+                setup: () => {
+                    worldGround.material.color.setHex(0x3b4046); scene.fog.color.setHex(0x25282c);
+                    const props=[];
+                    const castle=createArchitecturalCastle(); castle.position.set(0,0,-8); scene.add(castle); props.push(castle);
+                    const gateFrame=new THREE.Mesh(new THREE.BoxGeometry(7.2,9.5,4.8),new THREE.MeshStandardMaterial({color:0x2d3138,roughness:0.9})); gateFrame.position.set(0,4.75,-5.65); scene.add(gateFrame); props.push(gateFrame);
+                    const gate=new THREE.Mesh(new THREE.BoxGeometry(5.2,7.6,0.8),new THREE.MeshStandardMaterial({color:0x121212,roughness:0.95})); gate.position.set(0,3.8,-3.1); scene.add(gate); props.push(gate);
+
+                    // Three visible siege ladders leaning against the front wall.
+                    const ladders=[];
+                    for(let i=0;i<3;i++){
+                        const g=new THREE.Group();
+                        const wood=new THREE.MeshStandardMaterial({color:0x6f4e37,roughness:0.9});
+                        const side1=new THREE.Mesh(new THREE.BoxGeometry(0.28,14,0.28),wood);
+                        const side2=side1.clone(); side1.position.set(-1.0,7,0); side2.position.set(1.0,7,0);
+                        g.add(side1,side2);
+                        for(let r=0;r<8;r++){ const rung=new THREE.Mesh(new THREE.BoxGeometry(2.1,0.22,0.22),wood); rung.position.set(0,1.1+r*1.7,0); g.add(rung); }
+                        g.position.set(-7+i*7,0,-5.2); g.rotation.x=-0.18;
+                        scene.add(g); props.push(g); ladders.push(g);
+                    }
+
+                    // Three Al-Hums defenders on the battlements.
+                    const defenders=[];
+                    for(let i=0;i<3;i++){
+                        const d=createRobloxR6({shirtColor:0x2a9d8f,legColor:0x1d3557,headColor:0xf5cd2f,accessoryType:'helmet',weapon:'sword'});
+                        d.position.set(-6+i*6,12.2,-6.7); d.rotation.y=Math.PI; scene.add(d); props.push(d); defenders.push(d);
+                    }
+
+                    // British raiders begin at the foot of the ladders.
+                    const raiders=[];
+                    for(let i=0;i<6;i++){
+                        const b=createRobloxR6({shirtColor:0x20324a,legColor:0x111111,headColor:0xf5cd2f,accessoryType:'helmet',weapon:i%2?'sword':'spear'});
+                        b.position.set(-7+(i%3)*7,0.2,-2.5); b.rotation.y=Math.PI; scene.add(b); props.push(b); raiders.push(b);
+                    }
+
+                    const humFlag=createAlHumsFlag(); humFlag.position.set(0,16.5,-7); scene.add(humFlag); props.push(humFlag);
+                    const britFlag=(()=>{
+                        const c=document.createElement('canvas'); c.width=256; c.height=128; const x=c.getContext('2d');
+                        x.fillStyle='#ffffff'; x.fillRect(0,0,256,128); x.fillStyle='#c8102e'; x.fillRect(108,0,40,128); x.fillRect(0,44,256,40); x.fillStyle='#1f3c88'; x.fillRect(0,0,90,42); x.fillRect(166,86,90,42);
+                        const m=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.DoubleSide});
+                        const f=new THREE.Mesh(new THREE.PlaneGeometry(3.0,1.5),m); f.position.set(0,16.5,-7); f.visible=false; scene.add(f); props.push(f); return f;
+                    })();
+
+                    let t=0;
+                    const deadTimes=[7.2,8.3,9.4];
+                    return {actors:props,update:()=>{
+                        t+=0.05;
+                        // Raiders climb in waves, using the ladders visibly.
+                        raiders.forEach((b,i)=>{
+                            const wave=Math.floor(i/3), slot=i%3, phase=t-wave*0.9-slot*0.45;
+                            if(phase<0){ return; }
+                            if(phase<3.0){
+                                const climb=phase/3;
+                                b.position.x=-7+slot*7; b.position.y=0.8+climb*10.8; b.position.z=-3.8+climb*2.5;
+                                b.rig.leftArmGroup.rotation.x=-0.35+Math.sin(t*5+i)*0.18; b.rig.rightArmGroup.rotation.x=0.35+Math.cos(t*5+i)*0.18;
+                            } else {
+                                const x=-7+slot*7; b.position.set(x,11.6,-6.0); b.rotation.y=Math.PI;
+                                b.rig.rightArmGroup.rotation.x=-0.9+Math.sin(t*6+i)*0.35;
+                            }
+                        });
+                        // Three defenders fight briefly, then are defeated one by one and disappear below the battlement line.
+                        defenders.forEach((d,i)=>{
+                            if(t<6+i*0.6){ d.rig.rightArmGroup.rotation.x=-0.8+Math.sin(t*4+i)*0.25; return; }
+                            const dt=t-deadTimes[i];
+                            if(dt>=0){
+                                d.rotation.z=-Math.min(1.5,dt*2.2); d.position.y=Math.max(8.5,12.2-dt*2.4);
+                                d.rig.rightArmGroup.rotation.x=0.5;
+                                if(dt>1.3) d.visible=false;
+                            }
+                        });
+                        // After the defenders are gone, the raiders seize the flag and raise the British flag.
+                        if(t>10.8){ humFlag.visible=false; britFlag.visible=true; britFlag.rotation.z=0.04*Math.sin(t*2); }
+                    }};
+                }
+            },
+            {
+                title: "15. Cast Adrift to Save Mohamed",
+                desc: "The British reach the top of the castle and threaten the king. To keep Mohamed safe, his loyal companions place him inside a wooden barrel and send him over the cliffs toward the sea, giving him a chance to escape the invasion.",
                 camPos: [10, 16, 32],
                 camLookAt: [-8, 6, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0x005f73);
                     const props = [];
-
                     // Detailed Cliff Base
                     const cliff = new THREE.Mesh(
                         new THREE.BoxGeometry(26, 12, 22),
@@ -765,11 +2264,10 @@
                     // Red Invaders attacking near castle gate
                     const redAttackers = [];
                     for (let i = 0; i < 4; i++) {
-                        const red = createRobloxR6(0xd90429, 0x111111, 0xf5cd2f, 'helmet');
+                        const red = createRobloxR6({ shirtColor: 0x20324a, legColor: 0x111111, headColor: 0xf5cd2f, accessoryType: 'helmet', weapon: 'sword' });
                         red.position.set(-24 + i * 2.5, 11, -8 + (i % 2) * 2);
                         red.rotation.y = Math.PI / 2;
-                        red.rig.swordGroup.visible = true;
-                        scene.add(red);
+                                                scene.add(red);
                         redAttackers.push(red);
                         props.push(red);
                     }
@@ -777,21 +2275,20 @@
                     // Blue Castle Defenders fighting back
                     const blueDefenders = [];
                     for (let i = 0; i < 3; i++) {
-                        const blue = createRobloxR6(0x2a9d8f, 0x1d3557, 0xf5cd2f, 'helmet');
+                        const blue = createRobloxR6({ shirtColor: 0x2a9d8f, legColor: 0x1d3557, headColor: 0xf5cd2f, accessoryType: 'helmet', weapon: 'sword' });
                         blue.position.set(-17 + i * 2.2, 11, -7 + (i % 2) * 2);
                         blue.rotation.y = -Math.PI / 2;
-                        blue.rig.swordGroup.visible = true;
-                        scene.add(blue);
+                                                scene.add(blue);
                         blueDefenders.push(blue);
                         props.push(blue);
                     }
 
                     // Blue Companions pushing the leader in the barrel off the cliff
-                    const ally1 = createRobloxR6(0x2a9d8f, 0x1d3557);
+                    const ally1 = createRobloxR6({ shirtColor: 0x2a9d8f, legColor: 0x1d3557 });
                     ally1.position.set(-12, 11, -2);
                     ally1.rotation.y = Math.PI / 2;
 
-                    const ally2 = createRobloxR6(0x2a9d8f, 0x1d3557);
+                    const ally2 = createRobloxR6({ shirtColor: 0x2a9d8f, legColor: 0x1d3557 });
                     ally2.position.set(-12, 11, 2);
                     ally2.rotation.y = Math.PI / 2;
 
@@ -871,13 +2368,276 @@
                 }
             },
             {
-                title: "5. Arrival in Ginga (Texas)",
-                desc: "Mohamed washes ashore on a tropical desert coast with palm trees, rock formations, ocean waves, and washed-up barrel pieces, reuniting with Alizar.",
+                title: "16. The Long Ride Across the Sea",
+                desc: "Mohamed's barrel drifts farther from the fallen kingdom. The waves carry him across the open sea as the distant shore disappears and the long journey toward an unknown land begins.",
+                camPos:[10,9,28],camLookAt:[0,2,0],
+                setup:()=>{worldGround.material.color.setHex(0x006d77);const props=[];const water=new THREE.Mesh(new THREE.PlaneGeometry(280,280),new THREE.MeshStandardMaterial({color:0x0077b6,roughness:0.2,metalness:0.7}));water.rotation.x=-Math.PI/2;scene.add(water);props.push(water);const barrel=new THREE.Group();const body=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,3.5,14),new THREE.MeshStandardMaterial({color:0x6f4e37}));barrel.add(body);const head=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.1,1.1),new THREE.MeshStandardMaterial({color:0xf5cd2f}));head.position.y=2.1;barrel.add(head);barrel.position.set(-6,1.1,1);scene.add(barrel);props.push(barrel);let t=0;return{actors:props,update:()=>{t+=0.05;barrel.position.x+=0.03;barrel.position.y=1.1+Math.sin(t*2.2)*0.22;barrel.rotation.z=Math.sin(t*1.5)*0.22;}};}
+            },
+            {
+                title: "17. The Fall of Al-Hums",
+                desc: "After the British have taken the castle, they hunt down the remaining defenders, then return to the walls and set the fortress ablaze with a torch. The burning castle slowly sinks beneath the blue sea until it disappears below the surface.",
+                camPos: [-2, 15, 34],
+                camLookAt: [0, 7, 0],
+                setup: () => {
+                    // A bright blue sea surrounds the castle so the destruction reads clearly.
+                    worldGround.material.color.setHex(0x3a7f8f);
+                    scene.fog.color.setHex(0x5ca988);
+                    const props = [];
+
+                    const water = new THREE.Mesh(
+                        new THREE.PlaneGeometry(320, 320),
+                        new THREE.MeshStandardMaterial({ color: 0x087ea4, roughness: 0.2, metalness: 0.45 })
+                    );
+                    water.rotation.x = -Math.PI / 2;
+                    water.position.y = -1.15;
+                    scene.add(water);
+                    props.push(water);
+
+                    const castle = createArchitecturalCastle();
+                    castle.position.set(0, 0, -8);
+                    scene.add(castle);
+                    props.push(castle);
+
+                    // Small stone approach above the sea.
+                    const approach = new THREE.Mesh(
+                        new THREE.BoxGeometry(24, 1.2, 15),
+                        new THREE.MeshStandardMaterial({ color: 0x5a626e, roughness: 0.9 })
+                    );
+                    approach.position.set(0, -0.2, 3);
+                    scene.add(approach);
+                    props.push(approach);
+
+                    // Two sturdy ladders placed against the castle wall.
+                    const ladders = [];
+                    function makeLadder(x) {
+                        const g = new THREE.Group();
+                        const wood = new THREE.MeshStandardMaterial({ color: 0x6f4e37, roughness: 0.9 });
+                        const left = new THREE.Mesh(new THREE.BoxGeometry(0.24, 15, 0.24), wood);
+                        const right = left.clone();
+                        left.position.x = -0.8;
+                        right.position.x = 0.8;
+                        g.add(left, right);
+                        for (let y = -6.2; y <= 6.2; y += 1.35) {
+                            const rung = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.18, 0.24), wood);
+                            rung.position.y = y;
+                            g.add(rung);
+                        }
+                        g.position.set(x, 6.2, -1.9);
+                        g.rotation.x = -0.12;
+                        return g;
+                    }
+                    ladders.push(makeLadder(-8), makeLadder(8));
+                    ladders.forEach(l => { scene.add(l); props.push(l); });
+
+                    // Three final Al-Hums defenders wait on the battlements.
+                    const defenders = [];
+                    for (let i = 0; i < 3; i++) {
+                        const d = createRobloxR6({
+                            shirtColor: 0x2a9d8f,
+                            legColor: 0x1d3557,
+                            headColor: 0xf5cd2f,
+                            accessoryType: 'helmet',
+                            weapon: 'sword'
+                        });
+                        d.position.set(-5 + i * 5, 11.0, -3.8);
+                        d.rotation.y = Math.PI;
+                        scene.add(d);
+                        defenders.push(d);
+                        props.push(d);
+                    }
+
+                    // British raiders approach the ladders and then climb them.
+                    const brits = [];
+                    for (let i = 0; i < 3; i++) {
+                        const b = createRobloxR6({
+                            shirtColor: 0x383838,
+                            legColor: 0x111111,
+                            headColor: 0xf5cd2f,
+                            accessoryType: 'helmet',
+                            weapon: i === 1 ? 'spear' : 'sword'
+                        });
+                        b.position.set(-7 + i * 7, 0, 7 + (i % 2));
+                        b.rotation.y = Math.PI;
+                        scene.add(b);
+                        brits.push(b);
+                        props.push(b);
+                    }
+
+                    const torchBearer = createRobloxR6({
+                        shirtColor: 0x252525,
+                        legColor: 0x111111,
+                        headColor: 0xf5cd2f,
+                        accessoryType: 'helmet',
+                        weapon: 'torch'
+                    });
+                    torchBearer.position.set(11, 0, 8);
+                    torchBearer.rotation.y = Math.PI;
+                    scene.add(torchBearer);
+                    props.push(torchBearer);
+
+                    const firePatches = [];
+                    const fireLights = [];
+                    const fireMat = new THREE.MeshBasicMaterial({ color: 0xff5a1f });
+                    for (let i = 0; i < 9; i++) {
+                        const flame = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.4, 0.8), fireMat);
+                        flame.position.set(-11 + (i % 9) * 2.75, 5.5 + (i % 2) * 2, -5.1);
+                        flame.visible = false;
+                        scene.add(flame);
+                        firePatches.push(flame);
+                        props.push(flame);
+
+                        const light = new THREE.PointLight(0xff6a00, 0, 14);
+                        light.position.copy(flame.position);
+                        scene.add(light);
+                        fireLights.push(light);
+                        props.push(light);
+                    }
+
+                    const smoke = [];
+                    const smokeMat = new THREE.MeshBasicMaterial({ color: 0x303030, transparent: true, opacity: 0.52 });
+                    for (let i = 0; i < 14; i++) {
+                        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.65 + Math.random() * 0.45, 8, 8), smokeMat);
+                        puff.position.set(-10 + (i % 7) * 3.2, 8 + Math.floor(i / 7) * 2, -5 + (Math.random() - 0.5));
+                        puff.visible = false;
+                        scene.add(puff);
+                        smoke.push(puff);
+                        props.push(puff);
+                    }
+
+                    let phase = 0; // 0 place ladders, 1 climb, 2 fight, 3 descend, 4 burn, 5 sink
+                    let t = 0;
+                    let fireStarted = false;
+                    let sinkStarted = false;
+                    const fightStart = 7.0;
+                    const defenderDeathTimes = [7.3, 8.9, 10.5];
+
+                    return {
+                        actors: props,
+                        update: () => {
+                            t += 0.05;
+
+                            // 0. Raiders move toward and place the ladders.
+                            if (phase === 0) {
+                                brits.forEach((b, i) => {
+                                    const tx = -7 + i * 7;
+                                    if (b.position.z > 4.1) animateBotWalking(b, tx, 4.1, 0.075);
+                                    b.rotation.y = Math.PI;
+                                });
+                                if (t > 2.5) phase = 1;
+                            }
+
+                            // 1. Raiders climb upward along the ladders.
+                            if (phase === 1) {
+                                brits.forEach((b, i) => {
+                                    const ladderX = -7 + i * 7;
+                                    b.position.x = ladderX;
+                                    b.position.z = -1.7;
+                                    b.position.y = Math.min(8.6, b.position.y + 0.075);
+                                    b.rig.leftArmGroup.rotation.x = -0.9 + Math.sin(t * 7 + i) * 0.2;
+                                    b.rig.rightArmGroup.rotation.x = 0.9 - Math.sin(t * 7 + i) * 0.2;
+                                    b.rig.leftLegGroup.rotation.x = Math.sin(t * 7 + i) * 0.35;
+                                    b.rig.rightLegGroup.rotation.x = -Math.sin(t * 7 + i) * 0.35;
+                                });
+                                if (t > 5.8) phase = 2;
+                            }
+
+                            // 2. Close-range battlement fight. One defender is defeated at a time.
+                            if (phase === 2) {
+                                brits.forEach((b, i) => {
+                                    b.position.y = 8.8;
+                                    b.position.x = -7 + i * 7;
+                                    b.position.z = -2.7;
+                                    b.rotation.y = Math.PI;
+                                    b.rig.rightArmGroup.rotation.x = -1.0 + Math.sin(t * 10 + i) * 0.75;
+                                    b.rig.leftArmGroup.rotation.x = -0.2 + Math.cos(t * 8 + i) * 0.25;
+                                });
+                                defenders.forEach((d, i) => {
+                                    if (t < defenderDeathTimes[i]) {
+                                        d.rotation.y = Math.PI;
+                                        d.rig.rightArmGroup.rotation.x = -0.8 + Math.sin(t * 9 + i) * 0.55;
+                                        d.rig.leftArmGroup.rotation.x = -0.3 + Math.cos(t * 7 + i) * 0.25;
+                                    } else {
+                                        const dt = t - defenderDeathTimes[i];
+                                        d.rotation.z = -Math.min(Math.PI / 2, dt * 2.8);
+                                        d.position.y = Math.max(7.8, 11.0 - dt * 3.5);
+                                        d.rig.rightArmGroup.rotation.x = 0.5;
+                                        if (dt > 0.9) d.visible = false;
+                                    }
+                                });
+                                if (t > 11.8) phase = 3;
+                            }
+
+                            // 3. The British descend before setting the fire.
+                            if (phase === 3) {
+                                brits.forEach((b, i) => {
+                                    b.position.x = -7 + i * 7;
+                                    b.position.z = -1.7;
+                                    if (b.position.y > 0.4) {
+                                        b.position.y -= 0.09;
+                                        b.rig.leftArmGroup.rotation.x = 0.8;
+                                        b.rig.rightArmGroup.rotation.x = -0.8;
+                                        b.rig.leftLegGroup.rotation.x = -0.3;
+                                        b.rig.rightLegGroup.rotation.x = 0.3;
+                                    }
+                                });
+                                if (t > 14.3) phase = 4;
+                            }
+
+                            // 4. Only after the last defender is gone and raiders are down do they ignite it.
+                            if (phase === 4) {
+                                if (!fireStarted) fireStarted = true;
+                                torchBearer.position.set(0, 0, -1.2);
+                                torchBearer.rotation.y = Math.PI;
+                                torchBearer.rig.rightArmGroup.rotation.x = -Math.PI / 3;
+                                firePatches.forEach((flame, i) => {
+                                    flame.visible = true;
+                                    flame.scale.y = 0.85 + 0.35 * (0.5 + 0.5 * Math.sin(t * 13 + i));
+                                });
+                                fireLights.forEach((light, i) => {
+                                    light.intensity = 2.5 + Math.sin(t * 14 + i) * 0.8;
+                                });
+                                smoke.forEach((puff, i) => {
+                                    puff.visible = true;
+                                    puff.position.y += 0.045 + (i % 3) * 0.006;
+                                    if (puff.position.y > 20) puff.position.y = 7 + (i % 5) * 1.4;
+                                });
+                                if (t > 15.2) phase = 5;
+                            }
+
+                            // 5. The burning castle slowly sinks beneath the blue sea.
+                            if (phase === 5) {
+                                firePatches.forEach((flame, i) => {
+                                    flame.visible = true;
+                                    flame.scale.y = 0.8 + 0.45 * (0.5 + 0.5 * Math.sin(t * 12 + i));
+                                });
+                                const sink = Math.min(13, (t - 15.2) * 0.72);
+                                castle.position.y = -sink;
+                                fireLights.forEach((light, i) => {
+                                    light.intensity = Math.max(0, 3.2 - sink * 0.08) + Math.sin(t * 13 + i) * 0.7;
+                                });
+                                smoke.forEach((puff, i) => {
+                                    puff.visible = true;
+                                    puff.position.y += 0.05;
+                                    if (puff.position.y > 20) puff.position.y = 7 + (i % 4) * 1.5;
+                                });
+                                if (sink > 9.5) {
+                                    castle.visible = false;
+                                    firePatches.forEach(f => f.visible = false);
+                                }
+                            }
+                        }
+                    };
+                }
+            },
+            {
+                title: "18. Arrival in Ginga (Texas)",
+                desc: "Mohamed's barrel finally reaches the shores of Ginga, the land that will become Texas. He survives the dangerous journey, steps into a new world, and begins searching for a way forward.",
                 camPos: [0, 10, 24],
                 camLookAt: [0, 2, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0xe0a96d);
                     const props = [];
+                    addSceneDetails(5, props);
 
                     // Palm Trees
                     for (let p = -16; p <= 16; p += 8) {
@@ -910,7 +2670,7 @@
                     barrelPiece.position.set(-6, 0.8, 0);
                     barrelPiece.rotation.z = Math.PI / 2;
 
-                    const mohamed = createRobloxR6(0x2a9d8f, 0x264653);
+                    const mohamed = createRobloxR6({ shirtColor: 0x90be6d, legColor: 0x6b3f1f, headColor: 0xf5cd2f, accessoryType: 'crown' });
                     mohamed.position.set(-5, 0, 0);
 
                     const alizar = createRobloxR6(0xf4a261, 0x6b705c);
@@ -933,13 +2693,20 @@
                 }
             },
             {
-                title: "6. A&M Snack Boom (Chocolate Trade)",
-                desc: "CHOCOLATE MARKET PACKED WITH PEOPLE: Mohamed & Alizar run a bustling snack plaza with a huge crowd of customers buying chocolate bars, exchanging cash notes, and socialising.",
+                title: "19. A New Alliance in Ginga",
+                desc: "Mohamed meets Alizar on the shores of Ginga. Their handshake marks the beginning of a new friendship and alliance as the two decide to face the challenges of their new home together.",
+                camPos:[0,9,24],camLookAt:[0,3,0],
+                setup:()=>{worldGround.material.color.setHex(0xe0a96d);const props=[];const mohamed=createRobloxR6({shirtColor:0x90be6d,legColor:0x6b3f1f,headColor:0xf5cd2f,accessoryType:'crown'});mohamed.position.set(-3,0,2);scene.add(mohamed);props.push(mohamed);const alizar=createRobloxR6({shirtColor:0xe5a93b,legColor:0x3d2314});alizar.position.set(3,0,2);scene.add(alizar);props.push(alizar);let t=0;return{actors:props,update:()=>{t+=0.05;mohamed.rig.rightArmGroup.rotation.x=-1.1+Math.sin(t*2)*0.18;alizar.rig.rightArmGroup.rotation.x=-1.1-Math.sin(t*2)*0.18;}};}
+            },
+            {
+                title: "20. A&M Snack Boom (Chocolate Trade)",
+                desc: "Mohamed and Alizar turn their cacao skills into A&M Snacks. They prepare chocolate treats, serve customers, exchange money for sweets, and watch their small business become a lively success.",
                 camPos: [0, 16, 36],
                 camLookAt: [0, 3, 0],
                 setup: () => {
                     worldGround.material.color.setHex(0xdda15e);
                     const props = [];
+                    addSceneDetails(6, props);
 
                     // Grand Snack Shop Structure
                     const shop = new THREE.Mesh(new THREE.BoxGeometry(16, 7, 7), new THREE.MeshStandardMaterial({ color: 0x8b5a2b }));
@@ -970,7 +2737,7 @@
                     }
 
                     // Main Sellers: Mohamed & Alizar
-                    const mohamed = createRobloxR6(0x2a9d8f, 0x264653);
+                    const mohamed = createRobloxR6({ shirtColor: 0x90be6d, legColor: 0x6b3f1f, headColor: 0xf5cd2f, accessoryType: 'crown' });
                     mohamed.position.set(-3, 0, -1);
                     scene.add(mohamed);
                     props.push(mohamed);
@@ -1047,183 +2814,172 @@
                 }
             },
             {
-                title: "7. Corruption and Destruction",
-                desc: "ENHANCED SCENE 7: Corrupt enforcers burn down the snack shop with blazing torches. Charred collapsed beams crumble amidst raging fire lighting, flying embers, and heavy smoke.",
-                camPos: [0, 13, 28],
-                camLookAt: [0, 3, 0],
+                title: "21. A&M Snacks Takes Off",
+                desc: "A&M Snacks grows into a busy and successful shop. Mohamed and Alizar work side by side, customers keep arriving, and the business begins to look like a thriving part of the community.",
+                camPos:[0,10.5,26],camLookAt:[0,3.5,-1],
+                setup:()=>{
+                    worldGround.material.color.setHex(0xdda15e); scene.fog.color.setHex(0xdda15e);
+                    const props=[];
+                    const wallMat=new THREE.MeshStandardMaterial({color:0x8b5a2b,roughness:0.8});
+                    const trimMat=new THREE.MeshStandardMaterial({color:0xe5a93b,roughness:0.55});
+                    const darkMat=new THREE.MeshStandardMaterial({color:0x3d2314,roughness:0.8});
+                    const shop=new THREE.Group();
+                    const body=new THREE.Mesh(new THREE.BoxGeometry(20,8,6),wallMat);body.position.set(0,4,-8);shop.add(body);
+                    const roof=new THREE.Mesh(new THREE.BoxGeometry(21,0.7,6.6),trimMat);roof.position.set(0,8.35,-8);shop.add(roof);
+                    const awning=new THREE.Mesh(new THREE.BoxGeometry(18,1.3,1.0),trimMat);awning.position.set(0,6.2,-4.85);shop.add(awning);
+                    for(let x=-7.5;x<=7.5;x+=5){const post=new THREE.Mesh(new THREE.BoxGeometry(0.35,5.5,0.35),darkMat);post.position.set(x,3.1,-4.85);shop.add(post);}
+                    const sign=new THREE.Mesh(new THREE.BoxGeometry(13,1.5,0.35),darkMat);sign.position.set(0,7.1,-4.7);shop.add(sign);
+                    const windowMat=new THREE.MeshBasicMaterial({color:0x18242b});
+                    for(let x=-6;x<=6;x+=6){const w=new THREE.Mesh(new THREE.BoxGeometry(4,2.6,0.25),windowMat);w.position.set(x,3.9,-4.9);shop.add(w);}
+                    scene.add(shop);props.push(shop);
+                    const counter=new THREE.Mesh(new THREE.BoxGeometry(13,1.7,2.2),darkMat);counter.position.set(0,0.85,1.0);scene.add(counter);props.push(counter);
+                    const shelves=[];for(let i=0;i<5;i++){const shelf=new THREE.Mesh(new THREE.BoxGeometry(2.0,0.2,1.2),trimMat);shelf.position.set(-8+i*4.0,2.0,0.15);scene.add(shelf);shelves.push(shelf);props.push(shelf);}
+                    const goods=[];for(let i=0;i<15;i++){const g=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.45,0.7),new THREE.MeshStandardMaterial({color:i%2?0x6e3619:0x3d2314}));g.position.set(-8+(i%5)*4,2.35+Math.floor(i/5)*0.9,0.15);scene.add(g);goods.push(g);props.push(g);}
+                    const mohamed=createRobloxR6({shirtColor:0x90be6d,legColor:0x6b3f1f,headColor:0xf5cd2f,accessoryType:'crown'});mohamed.position.set(-2,0,2.2);scene.add(mohamed);props.push(mohamed);
+                    const alizar=createRobloxR6({shirtColor:0xe5a93b,legColor:0x3d2314});alizar.position.set(2,0,2.2);scene.add(alizar);props.push(alizar);
+                    const customers=[];for(let i=0;i<7;i++){const c=createRobloxR6({shirtColor:i%2?0xe9c46a:0x74c69d,legColor:0x264653});c.position.set(-10+i*3.2,0,7);scene.add(c);props.push(c);customers.push(c);}
+                    const steaming=[];for(let i=0;i<8;i++){const q=new THREE.Mesh(new THREE.SphereGeometry(0.15,6,6),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.35}));q.position.set(-1+(i%4)*0.7,2.3+(i%2)*0.5,2.2);scene.add(q);steaming.push(q);props.push(q);}
+                    let t=0;return{actors:props,update:()=>{t+=0.05;customers.forEach((c,i)=>{animateBotWalking(c,-7+(i%5)*3.5,2.2,0.035);c.rig.rightArmGroup.rotation.x=-0.8+Math.sin(t*2+i)*0.2;});mohamed.rig.leftArmGroup.rotation.x=-0.9+Math.sin(t*2)*0.25;alizar.rig.rightArmGroup.rotation.x=-1.0+Math.sin(t*2.4)*0.25;steaming.forEach((q,i)=>{q.position.y=2.2+(i%2)*0.5+Math.abs(Math.sin(t*1.5+i))*0.8;});}};}
+            },
+                        {
+                title: "22. The Threat of Corruption",
+                desc: "The success of A&M Snacks is threatened by corrupt forces. Mohamed and Alizar are attacked and brought down, while the burning shop behind them buckles, collapses, and breaks into smoldering debris.",
+                camPos: [0, 12, 23], camLookAt: [0, 3.4, -1.5],
                 setup: () => {
                     worldGround.material.color.setHex(0x181310);
+                    scene.fog.color.setHex(0x1b0000);
                     const props = [];
+                    const shopMat = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.95 });
+                    const roofMat = new THREE.MeshStandardMaterial({ color: 0x101010, roughness: 0.95 });
+                    const woodMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.95 });
+                    const shop = new THREE.Group();
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(16, 7, 7), shopMat); body.position.set(0, 3.5, -5); shop.add(body);
+                    const roof = new THREE.Mesh(new THREE.BoxGeometry(17, 0.8, 7.4), roofMat); roof.position.set(0, 7.4, -5); shop.add(roof);
+                    const awning = new THREE.Mesh(new THREE.BoxGeometry(14, 1.2, 1.0), woodMat); awning.position.set(0, 5.9, -1.5); shop.add(awning);
+                    const counter = new THREE.Mesh(new THREE.BoxGeometry(13, 1.8, 1.4), woodMat); counter.position.set(0, 0.9, 0.2);
+                    const sign = new THREE.Mesh(new THREE.BoxGeometry(10, 1.8, 0.3), new THREE.MeshStandardMaterial({ color: 0x171717, roughness: 0.9 })); sign.position.set(0, 6.1, -1.3);
+                    scene.add(shop, counter, sign); props.push(shop, counter, sign);
 
-                    // Charred Collapsed Shop Structure
-                    const charredMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.95 });
-                    const shopBase = new THREE.Mesh(new THREE.BoxGeometry(14, 5.5, 6.5), charredMat);
-                    shopBase.position.set(0, 2.75, -4);
-                    scene.add(shopBase);
-                    props.push(shopBase);
-
-                    // Broken Collapsed Timber Beams
-                    const woodMat = new THREE.MeshStandardMaterial({ color: 0x2b1a0e, roughness: 0.9 });
-                    for (let b = 0; b < 8; b++) {
-                        const beam = new THREE.Mesh(new THREE.BoxGeometry(0.7, 7.5, 0.7), woodMat);
-                        beam.position.set((b - 3.5) * 2, 5, -4);
-                        beam.rotation.z = (Math.random() - 0.5) * 1.1;
-                        beam.rotation.x = (Math.random() - 0.5) * 0.6;
-                        scene.add(beam);
-                        props.push(beam);
-                    }
-
-                    // Destroyed Counter & Debris
-                    const counter = new THREE.Mesh(new THREE.BoxGeometry(10, 1.2, 1.2), charredMat);
-                    counter.position.set(0, 0.6, 0.2);
-                    counter.rotation.z = -0.18;
-                    scene.add(counter);
-                    props.push(counter);
-
-                    // Corrupt Enforcers surrounding the inferno with torches
-                    const enforcers = [];
-                    const positions = [[-7, 0, 1], [7, 0, 1], [-2, 0, 5], [3, 0, 5]];
-                    positions.forEach(pos => {
-                        const enf = createRobloxR6(0x111111, 0x050505, 0xf5cd2f, 'helmet');
-                        enf.position.set(...pos);
-                        enf.rotation.y = Math.atan2(-pos[0], -pos[2] - 4);
-                        
-                        const torch = createTorch(0, 0, 0);
-                        torch.position.set(0, -1.5, 0.5);
-                        torch.scale.set(0.6, 0.6, 0.6);
-                        enf.rig.rightArmGroup.add(torch);
-                        enf.rig.rightArmGroup.rotation.x = -Math.PI / 2.5;
-
-                        scene.add(enf);
-                        enforcers.push(enf);
-                        props.push(enf);
+                    // Fire and smoke
+                    const flames = [];
+                    const flameMatA = new THREE.MeshBasicMaterial({ color: 0xff4500 });
+                    const flameMatB = new THREE.MeshBasicMaterial({ color: 0xffa500 });
+                    [[-6,3,-1.1],[-3,5,-1.1],[0,6.7,-1.1],[3,4.3,-1.1],[6,3,-1.1],[-2,8,-5],[4,7.5,-5]].forEach((p,i)=>{
+                        const f=new THREE.Mesh(new THREE.BoxGeometry(0.7,1.6+(i%3)*0.3,0.45),i%2?flameMatB:flameMatA);f.position.set(...p);scene.add(f);props.push(f);flames.push(f);
                     });
+                    const smoke=[]; const smokeMat=new THREE.MeshBasicMaterial({color:0x222222,transparent:true,opacity:0.28});
+                    for(let i=0;i<14;i++){const p=new THREE.Mesh(new THREE.SphereGeometry(0.5+(i%3)*0.2,8,8),smokeMat);p.position.set(-5+(i%6)*2,8+(i%4)*1.1,-5);scene.add(p);props.push(p);smoke.push(p);}
+                    const fireLight=new THREE.PointLight(0xff5a00,7,42);fireLight.position.set(0,5,-2);scene.add(fireLight);props.push(fireLight);
 
-                    // Dynamic Fire Lighting
-                    const fireLight1 = new THREE.PointLight(0xff4500, 6, 35);
-                    fireLight1.position.set(-2, 4, -3);
-                    const fireLight2 = new THREE.PointLight(0xffaa00, 5, 35);
-                    fireLight2.position.set(3, 3, -2);
-                    scene.add(fireLight1, fireLight2);
-                    props.push(fireLight1, fireLight2);
+                    const mohamed=createRobloxR6({shirtColor:0x90be6d,legColor:0x6b3f1f,headColor:0xf5cd2f,accessoryType:'crown'});mohamed.position.set(-2.6,0,1.5);scene.add(mohamed);props.push(mohamed);
+                    const alizar=createRobloxR6({shirtColor:0xe5a93b,legColor:0x3d2314});alizar.position.set(2.6,0,1.5);scene.add(alizar);props.push(alizar);
+                    const attacker1=createRobloxR6({shirtColor:0x111111,legColor:0x050505,accessoryType:'helmet',weapon:'spear'});attacker1.position.set(-5,0,1.3);attacker1.rotation.y=Math.PI/2;
+                    const attacker2=createRobloxR6({shirtColor:0x111111,legColor:0x050505,accessoryType:'helmet',weapon:'spear'});attacker2.position.set(5,0,1.3);attacker2.rotation.y=-Math.PI/2;
+                    scene.add(attacker1,attacker2);props.push(attacker1,attacker2);
 
-                    // Dynamic Fire Particles System
-                    const fireParticles = [];
-                    const particleColors = [0xff0000, 0xff5500, 0xffaa00, 0xffff00, 0x222222];
-                    
-                    for (let i = 0; i < 90; i++) {
-                        const size = 0.3 + Math.random() * 0.6;
-                        const p = new THREE.Mesh(
-                            new THREE.BoxGeometry(size, size, size),
-                            new THREE.MeshBasicMaterial({ color: particleColors[i % particleColors.length] })
-                        );
-                        p.position.set((Math.random() - 0.5) * 13, Math.random() * 9, -4 + (Math.random() - 0.5) * 5);
-                        scene.add(p);
-                        fireParticles.push(p);
-                        props.push(p);
+                    // Actual shop fragments: these are hidden until the collapse, then fly and tumble down.
+                    const fragments=[]; const fragMat=new THREE.MeshStandardMaterial({color:0x090909,roughness:1});
+                    for(let r=0;r<3;r++) for(let c=0;c<6;c++){
+                        const piece=new THREE.Mesh(new THREE.BoxGeometry(2.5,1.5,2.0),fragMat);
+                        piece.position.set(-6.25+c*2.5,1.5+r*2.0,-5);
+                        piece.visible=false; scene.add(piece); props.push(piece); fragments.push(piece);
                     }
+                    for(let i=0;i<8;i++){
+                        const piece=new THREE.Mesh(new THREE.BoxGeometry(1.3,0.45,1.3),fragMat);
+                        piece.position.set((i-3.5)*2.2,7.4,-5); piece.visible=false; scene.add(piece);props.push(piece);fragments.push(piece);
+                    }
+                    fragments.forEach((p,i)=>{p.userData.vx=(i%2?1:-1)*(0.02+Math.random()*0.04);p.userData.vy=0.06+Math.random()*0.08;p.userData.vz=(Math.random()-0.5)*0.03;});
 
-                    let burnTime = 0;
-                    return {
-                        actors: props,
-                        update: () => {
-                            burnTime += 0.015;
+                    let timer=0, fallen=false, collapse=false, collapseT=0;
+                    return {actors:props,update:()=>{
+                        timer+=0.05;
+                        fireLight.intensity=6+Math.sin(timer*18)*2.5;
+                        flames.forEach((f,i)=>{f.scale.y=0.75+0.35*Math.abs(Math.sin(timer*8+i));f.rotation.z=Math.sin(timer*6+i)*0.08;});
+                        smoke.forEach((p,i)=>{p.position.y+=0.028;if(p.position.y>16)p.position.y=7;});
 
-                            fireLight1.intensity = 5 + Math.sin(burnTime * 25) * 2.5;
-                            fireLight2.intensity = 4 + Math.cos(burnTime * 18) * 2;
+                        if(!fallen){
+                            attacker1.rig.rightArmGroup.rotation.x=-Math.PI/2+Math.sin(timer*12)*0.7;
+                            attacker2.rig.rightArmGroup.rotation.x=-Math.PI/2+Math.cos(timer*12)*0.7;
+                            mohamed.rig.leftArmGroup.rotation.x=Math.sin(timer*10)*0.35;
+                            alizar.rig.leftArmGroup.rotation.x=-Math.sin(timer*10)*0.35;
+                            if(timer>5.0) fallen=true;
+                        } else {
+                            mohamed.rotation.z=Math.min(Math.PI/2,mohamed.rotation.z+0.08);mohamed.position.y=0.5;
+                            alizar.rotation.z=Math.max(-Math.PI/2,alizar.rotation.z-0.08);alizar.position.y=0.5;
+                            if(timer>6.8) collapse=true;
+                        }
 
-                            fireParticles.forEach(p => {
-                                p.position.y += 0.18;
-                                p.position.x += Math.sin(burnTime + p.position.y) * 0.06;
-                                p.scale.multiplyScalar(0.96);
-
-                                if (p.position.y > 12 || p.scale.x < 0.05) {
-                                    p.position.y = 0.5;
-                                    p.position.x = (Math.random() - 0.5) * 13;
-                                    p.position.z = -4 + (Math.random() - 0.5) * 5;
-                                    p.scale.set(1, 1, 1);
-                                }
+                        if(collapse){
+                            collapseT=Math.min(1,collapseT+0.035);
+                            shop.visible = collapseT<0.18;
+                            if(collapseT<0.18){shop.rotation.z += 0.012;}
+                            counter.visible = collapseT<0.28;
+                            sign.visible = collapseT<0.24;
+                            counter.position.y=Math.max(0.35,0.9-collapseT*0.7);
+                            sign.position.y=Math.max(0.5,6.1-collapseT*4.2);
+                            fragments.forEach((piece,i)=>{
+                                if(collapseT>0.08) piece.visible=true;
+                                piece.position.x += piece.userData.vx * (0.8+collapseT*2.6);
+                                piece.position.y += piece.userData.vy;
+                                piece.position.z += piece.userData.vz;
+                                piece.userData.vy -= 0.0045;
+                                piece.rotation.x += 0.025 + i*0.0003;
+                                piece.rotation.z += 0.03;
+                                if(piece.position.y<0.35) piece.position.y=0.35;
                             });
                         }
-                    };
+                    }};
                 }
             },
             {
-                title: "8. Becoming a Mirja",
-                desc: "Mohamed ascends as a divine leader upon a white marble temple dais flanked by tall columns, as dozens of followers bow in reverence beneath glowing aura particles.",
-                camPos: [0, 12, 30],
-                camLookAt: [0, 3, 0],
+                title: "23. Mohamed’s Legacy (The Mirja)",
+                desc: "Mohamed's journey becomes a lasting legacy. As a revered mirja, he stands before his people while the community gathers in unity, remembering his courage, leadership, resilience, and the long journey that brought them here.",
+                camPos: [0, 14, 32],
+                camLookAt: [0, 4, 0],
+                skyColor: 0xfffae6,
                 setup: () => {
                     worldGround.material.color.setHex(0x52b788);
+                    scene.fog.color.setHex(0xfffae6);
                     const props = [];
 
-                    const pillarMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.1 });
-                    for (let p = -12; p <= 12; p += 4) {
-                        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 14, 16), pillarMat);
-                        pillar.position.set(p, 7, -6);
-                        pillar.castShadow = true;
-                        scene.add(pillar);
-                        props.push(pillar);
-                    }
+                    const dais = new THREE.Mesh(new THREE.CylinderGeometry(7, 8, 2.5, 20), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8 }));
+                    dais.position.set(0, 1.25, -2);
+                    scene.add(dais);
+                    props.push(dais);
 
-                    const podium = new THREE.Mesh(
-                        new THREE.CylinderGeometry(5.5, 6.5, 2.4, 20),
-                        pillarMat
-                    );
-                    podium.position.set(0, 1.2, -2);
-                    podium.receiveShadow = true;
-                    scene.add(podium);
-                    props.push(podium);
-
-                    const auraLight = new THREE.PointLight(0xffd700, 5, 30);
-                    auraLight.position.set(0, 5, -2);
+                    const auraLight = new THREE.PointLight(0xffd700, 6, 35);
+                    auraLight.position.set(0, 6, -2);
                     scene.add(auraLight);
                     props.push(auraLight);
 
-                    const sparkles = [];
-                    const sparkleMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
-                    for (let sp = 0; sp < 40; sp++) {
-                        const spark = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.25), sparkleMat);
-                        spark.position.set((Math.random() - 0.5) * 14, Math.random() * 9, -2 + (Math.random() - 0.5) * 8);
-                        scene.add(spark);
-                        sparkles.push(spark);
-                        props.push(spark);
-                    }
-
-                    const mohamed = createRobloxR6(0xffffff, 0xffffff, 0xf5cd2f, 'crown');
-                    mohamed.position.set(0, 2.4, -2);
+                    const mohamed = createRobloxR6({ shirtColor: 0xffffff, legColor: 0xffffff, headColor: 0xf5cd2f, accessoryType: 'crown' });
+                    mohamed.position.set(0, 2.5, -2);
                     scene.add(mohamed);
                     props.push(mohamed);
 
-                    // Large crowd of bowing followers
+                    // Massive crowd of followers obeying/bowing
                     const followers = [];
-                    for (let i = -4; i <= 4; i++) {
-                        if (i === 0) continue;
-                        const follower = createRobloxR6(0x74c69d, 0x1b4332);
-                        follower.position.set(i * 3.2, 0, 4 + (Math.abs(i) % 2) * 2);
-                        follower.rotation.y = Math.PI;
-                        scene.add(follower);
-                        followers.push(follower);
-                        props.push(follower);
+                    for (let x = -16; x <= 16; x += 4) {
+                        for (let z = 4; z <= 12; z += 4) {
+                            const fol = createRobloxR6({ shirtColor: 0x74c69d, legColor: 0x1b4332 });
+                            fol.position.set(x + (Math.random() - 0.5), 0, z);
+                            scene.add(fol);
+                            followers.push(fol);
+                            props.push(fol);
+                        }
                     }
 
-                    let time = 0;
+                    let t = 0;
                     return {
                         actors: props,
                         update: () => {
-                            time += 0.02;
-                            auraLight.intensity = 3.5 + Math.sin(time * 3) * 1.5;
-
-                            mohamed.rig.leftArmGroup.rotation.x = -Math.PI / 2.5;
-                            mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 2.5;
-
-                            sparkles.forEach(sp => {
-                                sp.position.y += 0.035;
-                                if (sp.position.y > 10) sp.position.y = 1;
-                            });
+                            t += 0.03;
+                            auraLight.intensity = 4 + Math.sin(t * 3) * 2;
+                            mohamed.rig.leftArmGroup.rotation.x = -Math.PI / 2.2 + Math.sin(t * 2) * 0.1;
+                            mohamed.rig.rightArmGroup.rotation.x = -Math.PI / 2.2 + Math.sin(t * 2) * 0.1;
 
                             followers.forEach((f, idx) => {
-                                f.rig.leftArmGroup.rotation.x = -Math.PI / 3 + Math.sin(time + idx) * 0.15;
+                                f.rig.torso.rotation.x = Math.PI / 6 + Math.sin(t * 2 + idx) * 0.1;
                             });
                         }
                     };
@@ -1234,7 +2990,55 @@
         let currentSceneIndex = 0;
         let activeSceneInstance = null;
         let autoPlay = true;
-        let autoPlayTimer = null;
+        let narratorEnabled = true;
+        let sceneStartTime = Date.now();
+        let narratorVoice = null;
+        let narratorUnlocked = false;
+
+        function loadNarratorVoice() {
+            if (!('speechSynthesis' in window)) return;
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices.length) return;
+            narratorVoice = voices.find(v => /^en(-|_)/i.test(v.lang) && /Natural|Google UK English Male|Google US English|Microsoft David|Microsoft Mark|Daniel|Alex/i.test(v.name))
+                || voices.find(v => /^en(-|_)/i.test(v.lang) && /Google|Microsoft|Samantha|Daniel|Alex/i.test(v.name))
+                || voices.find(v => /^en(-|_)/i.test(v.lang))
+                || voices[0];
+        }
+
+        function speakScene(data) {
+            if (!narratorEnabled || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            loadNarratorVoice();
+            const utterance = new SpeechSynthesisUtterance(`${data.title}. ${data.desc}`);
+            if (narratorVoice) utterance.voice = narratorVoice;
+            utterance.lang = narratorVoice?.lang || 'en-US';
+            // Speak briskly enough to finish before the next scene while keeping a natural cadence.
+            const wordCount = `${data.title} ${data.desc}`.trim().split(/\s+/).length;
+            const targetSeconds = getSceneDurationMs(currentSceneIndex) / 1000 * 0.88;
+            const neededRate = wordCount / (targetSeconds * 2.55);
+            utterance.rate = Math.min(1.55, Math.max(1.25, neededRate));
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            utterance.onstart = () => { narratorUnlocked = true; };
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function toggleNarrator() {
+            narratorEnabled = !narratorEnabled;
+            const btn = document.getElementById('narrator-btn');
+            btn.innerText = `Narrator: ${narratorEnabled ? 'ON' : 'OFF'}`;
+            if (narratorEnabled) {
+                narratorUnlocked = true;
+                speakScene(storyData[currentSceneIndex]);
+            } else if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = loadNarratorVoice;
+            loadNarratorVoice();
+        }
 
         function clearCurrentScene() {
             if (activeSceneInstance && activeSceneInstance.actors) {
@@ -1251,6 +3055,7 @@
         function loadScene(index) {
             clearCurrentScene();
             currentSceneIndex = index;
+            sceneStartTime = Date.now();
 
             const data = storyData[index];
             document.getElementById('scene-title').innerText = data.title;
@@ -1261,41 +3066,43 @@
             camera.lookAt(...data.camLookAt);
 
             activeSceneInstance = data.setup();
-
-            if (autoPlay) {
-                resetAutoPlayTimer();
-            }
+            speakScene(data);
         }
 
         function nextScene() {
-            const nextIdx = (currentSceneIndex + 1) % storyData.length;
-            loadScene(nextIdx);
+            loadScene((currentSceneIndex + 1) % storyData.length);
         }
 
         function prevScene() {
-            const prevIdx = (currentSceneIndex - 1 + storyData.length) % storyData.length;
-            loadScene(prevIdx);
+            loadScene((currentSceneIndex - 1 + storyData.length) % storyData.length);
         }
 
         function toggleAutoPlay() {
             autoPlay = !autoPlay;
             document.getElementById('autoplay-btn').innerText = `Autoplay: ${autoPlay ? 'ON' : 'OFF'}`;
-            if (autoPlay) resetAutoPlayTimer();
-            else if (autoPlayTimer) clearTimeout(autoPlayTimer);
-        }
-
-        function resetAutoPlayTimer() {
-            if (autoPlayTimer) clearTimeout(autoPlayTimer);
-            autoPlayTimer = setTimeout(() => {
-                if (autoPlay) nextScene();
-            }, 14000);
+            sceneStartTime = Date.now();
         }
 
         function animate() {
             requestAnimationFrame(animate);
+
+            const elapsed = Date.now() - sceneStartTime;
+            if (autoPlay) {
+                const sceneDuration = getSceneDurationMs(currentSceneIndex);
+                const progress = Math.min((elapsed / sceneDuration) * 100, 100);
+                document.getElementById('progress-bar').style.width = `${progress}%`;
+
+                if (elapsed >= sceneDuration) {
+                    nextScene();
+                }
+            } else {
+                document.getElementById('progress-bar').style.width = `0%`;
+            }
+
             if (activeSceneInstance && activeSceneInstance.update) {
                 activeSceneInstance.update();
             }
+
             renderer.render(scene, camera);
         }
 
